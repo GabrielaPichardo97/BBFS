@@ -18,6 +18,14 @@ Esta fase implementa exclusivamente Bronze: adaptadores nativos de PubMed, Europ
 
 Validación ejecutada en esta fase: Ruff, mypy y 31 pruebas de pytest, incluidas pruebas sin red de inmutabilidad byte a byte, XML/JSON, reintentos, errores definitivos, escritura atómica, colisiones, manifest y reanudación. También se ejecutó una ingesta real limitada a 20 registros por fuente, que produjo cuatro respuestas HTTP y cero fallos; se validaron sus SHA-256 y que los payloads están ignorados por Git. La reanudación del mismo batch no solicitó ni sustituyó payloads.
 
+## Estado del entorno Docker
+
+La instalación de Docker Desktop se reintentó mediante el paquete oficial de
+`winget`. Windows informó que WSL no está instalado y el instalador requiere
+elevación para continuar. Por ello, `docker compose config`, `docker compose
+build` y `docker compose run --rm pipeline doctor` siguen pendientes de que WSL
+2 se habilite y se complete la instalación de Docker Desktop.
+
 ## Secuencia crítica posterior
 
 1. Añadir los modelos Pydantic v2 y la prueba de exclusión de `source_type='synthetic'` antes de habilitar Silver.
