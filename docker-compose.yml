@@ -1,0 +1,17 @@
+services:
+  pipeline:
+    build:
+      context: .
+    command: ["python", "-m", "baby_first_steps_medallion.cli", "doctor"]
+    environment:
+      BFSM_ARTIFACTS_DIR: /app/artifacts
+      BFSM_DATA_DIR: /app/data
+      BFSM_LOG_LEVEL: INFO
+      HF_HOME: /home/app/.cache/huggingface
+    volumes:
+      - ./data:/app/data
+      - ./artifacts:/app/artifacts
+      - hf-cache:/home/app/.cache/huggingface
+
+volumes:
+  hf-cache:

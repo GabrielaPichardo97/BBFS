@@ -6,17 +6,17 @@
 | --- | --- | --- |
 | 0. Descubrimiento de fuente | Muestra real y decisión inicial documentadas | Completado en el commit anterior |
 | 1. Diseño definitivo | PRD, contratos, arquitectura, fuentes y ADRs de esta entrega | Completado |
-| 2. Esqueleto local | Paquete, configuración, dependencias y pruebas unitarias mínimas | Pendiente |
+| 2. Esqueleto local | Paquete, configuración, dependencias, contenedor y pruebas mínimas | Completado |
 | 3. Bronze | Adaptadores PubMed, Europe PMC y OpenAlex; bytes crudos, manifiestos e idempotencia de descarga | Pendiente |
 | 4. Silver | Pydantic v2, cuarentena, canonicalización, staging y UPSERT DuckDB | Pendiente |
 | 5. Gold | Corpus, embeddings multilingües, FAISS incremental y consulta española | Pendiente |
 | 6. Operación | Docker Compose, evidencia generada por código y GitHub Actions | Pendiente |
 
-## Paso activo cerrado: diseño definitivo
+## Paso activo cerrado: esqueleto local
 
-Esta fase fija los contratos y decisiones que usarán los pasos 2–6. No crea `src/`, tests, base DuckDB, índices FAISS, modelos, Docker ni pipeline. El diseño incorpora los tres adaptadores solicitados, con OpenAlex condicionado a que su acceso anónimo siga disponible; nunca se resolverá con una API key.
+Esta fase crea el mínimo reproducible para los pasos posteriores: paquete Python 3.11, CLI Typer, configuración sin secretos, rutas locales, Docker Compose de un único servicio no root, dependencia bloqueada y pruebas. No implementa llamadas a APIs, tablas, payloads Bronze, DuckDB, FAISS, modelos ni pipeline.
 
-Validación ejecutada en esta fase: lectura UTF-8 y presencia de los 11 documentos requeridos, comprobación de los invariantes de edad y exclusión sintética en los contratos, ausencia de `src/` y `git diff --check`. No hay criterio de pipeline marcado como PASS.
+Validación ejecutada en esta fase: `doctor`, los seis comandos placeholder (salida 2), Ruff, mypy y 19 pruebas de pytest. Las pruebas incluyen configuración, rutas, CLI, contrato estático de contenedor, reglas de ignorado y la salvaguarda que rechaza `source_type='synthetic'` en límites productivos. Las comprobaciones `docker compose config`, `docker compose build` y `docker compose run --rm pipeline doctor` quedan pendientes porque Docker no está instalado en este equipo.
 
 ## Secuencia crítica posterior
 

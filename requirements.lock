@@ -1,0 +1,20 @@
+# Locked direct and transitive Python dependencies for Python 3.11.
+# Install with: python -m pip install -r requirements.lock
+click==8.1.8
+colorama==0.4.6 ; sys_platform == "win32"
+iniconfig==2.0.0
+markdown-it-py==3.0.0
+mdurl==0.1.2
+mypy==1.15.0
+mypy_extensions==1.0.0
+packaging==24.2
+pathspec==0.12.1
+pluggy==1.5.0
+pygments==2.19.1
+pytest==8.3.5
+rich==13.9.4
+ruff==0.9.10
+shellingham==1.5.4
+setuptools==75.8.0
+typer==0.15.1
+typing_extensions==4.12.2

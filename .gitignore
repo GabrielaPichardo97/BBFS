@@ -1,4 +1,35 @@
-tmp/
-data/
-artifacts/
+# Entornos, cachés y secretos locales
+.venv/
 __pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.cache/
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+credentials*.json
+
+# Datos y artefactos generados: sólo se versionan los marcadores de directorio.
+data/*
+!data/.gitkeep
+data/bronze/**
+data/*.duckdb
+data/gold/**
+data/models/**
+data/cache/**
+artifacts/*
+!artifacts/.gitkeep
+models/**
+*.faiss
+*.index
+
+# Evidencia temporal y notebooks ejecutados
+tmp/
+notebooks/.ipynb_checkpoints/
+notebooks/**/*.executed.ipynb
+*.nbconvert.ipynb

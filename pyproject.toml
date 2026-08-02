@@ -1,0 +1,42 @@
+[build-system]
+requires = ["setuptools>=75.8.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "baby-first-steps-medallion"
+version = "0.1.0"
+description = "Local scaffold for a bilingual early-childhood documentary medallion pipeline."
+readme = "README.md"
+requires-python = ">=3.11,<3.12"
+license = { text = "MIT" }
+authors = [{ name = "BBFS contributors" }]
+dependencies = ["typer==0.15.1"]
+
+[project.optional-dependencies]
+dev = [
+  "mypy==1.15.0",
+  "pytest==8.3.5",
+  "ruff==0.9.10",
+]
+
+[project.scripts]
+baby-first-steps-medallion = "baby_first_steps_medallion.cli:main"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+src = ["src"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+files = ["src"]
+mypy_path = "src"
+warn_unused_configs = true
