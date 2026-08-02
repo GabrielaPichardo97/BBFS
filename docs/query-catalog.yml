@@ -1,0 +1,61 @@
+version: 1
+project_visible_name: baby-first-steps-medallion
+interface_language: es
+default_age_range_months: [0, 36]
+intentions:
+  - id: early_stimulation
+    canonical_query_es: "actividades de estimulación temprana para bebés"
+    internal_expansion_es: ["estimulación temprana", "desarrollo infantil temprano", "desarrollo del bebé"]
+    internal_expansion_en: ["early stimulation", "early childhood development", "infant development"]
+    thematic_group: estimulacion_y_desarrollo
+    relevant_ages_months: [0, 36]
+    scope_notes: "Evidencia y recursos informativos; excluir diagnóstico, tratamiento y prescripción personalizada."
+  - id: sensory_play
+    canonical_query_es: "juegos sensoriales para bebés de cero a doce meses"
+    internal_expansion_es: ["juego sensorial", "exploración sensorial", "estimulación sensorial"]
+    internal_expansion_en: ["sensory play", "sensory exploration", "sensory development"]
+    thematic_group: juego_sensorial
+    relevant_ages_months: [0, 12]
+    scope_notes: "Priorizar estudios o recursos que indiquen claramente la edad; no inferir seguridad clínica."
+  - id: fine_motor
+    canonical_query_es: "actividades de motricidad fina con objetos cotidianos"
+    internal_expansion_es: ["motricidad fina", "destreza manual", "manipulación de objetos"]
+    internal_expansion_en: ["fine motor development", "fine motor activities", "object manipulation"]
+    thematic_group: motricidad_fina
+    relevant_ages_months: [6, 36]
+    scope_notes: "Los objetos cotidianos deben tratarse como tema documental, no como recomendación de seguridad."
+  - id: gross_motor
+    canonical_query_es: "juegos para desarrollar la coordinación y el movimiento"
+    internal_expansion_es: ["motricidad gruesa", "coordinación", "movimiento infantil"]
+    internal_expansion_en: ["gross motor activities", "motor coordination", "infant movement"]
+    thematic_group: motricidad_gruesa
+    relevant_ages_months: [0, 36]
+    scope_notes: "Conservar el contexto de edad y población para evitar extrapolaciones."
+  - id: shared_reading
+    canonical_query_es: "lectura compartida para estimular el lenguaje"
+    internal_expansion_es: ["lectura compartida", "lectura de libros", "desarrollo del lenguaje"]
+    internal_expansion_en: ["shared reading", "shared book reading", "language development"]
+    thematic_group: lenguaje_y_lectura
+    relevant_ages_months: [0, 36]
+    scope_notes: "Distinguir lectura con bebés de estudios de niños mayores durante la recuperación posterior."
+  - id: music_movement
+    canonical_query_es: "música y movimiento para el desarrollo infantil temprano"
+    internal_expansion_es: ["música y movimiento", "actividad musical", "desarrollo infantil temprano"]
+    internal_expansion_en: ["music and movement", "music activities", "early childhood development"]
+    thematic_group: musica_y_movimiento
+    relevant_ages_months: [0, 36]
+    scope_notes: "No presentar los resultados como musicoterapia ni tratamiento."
+  - id: caregiver_interaction
+    canonical_query_es: "interacción entre cuidadores y bebés para el desarrollo socioemocional"
+    internal_expansion_es: ["interacción cuidador bebé", "interacción padre bebé", "desarrollo socioemocional"]
+    internal_expansion_en: ["caregiver infant interaction", "parent infant interaction", "social emotional development"]
+    thematic_group: interaccion_y_socioemocional
+    relevant_ages_months: [0, 36]
+    scope_notes: "Mantener el contenido como información de desarrollo, no evaluación de apego o salud mental."
+  - id: play_materials
+    canonical_query_es: "materiales de juego seguros para bebés y niños pequeños"
+    internal_expansion_es: ["materiales de juego", "juguetes apropiados para la edad", "seguridad de juguetes"]
+    internal_expansion_en: ["play materials", "age appropriate toys", "toy safety"]
+    thematic_group: materiales_de_juego
+    relevant_ages_months: [0, 36]
+    scope_notes: "La recuperación puede documentar seguridad, pero no sustituye normas locales ni instrucciones del fabricante."
