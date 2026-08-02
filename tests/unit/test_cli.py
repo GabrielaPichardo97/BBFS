@@ -29,7 +29,7 @@ def test_doctor_succeeds_without_optional_libraries(
     assert "[SKIP] faiss" in result.output
 
 
-@pytest.mark.parametrize("command", ["ingest", "silver", "gold", "search", "evidence", "demo"])
+@pytest.mark.parametrize("command", ["silver", "gold", "search", "evidence", "demo"])
 def test_placeholder_commands_fail_without_simulating_success(
     runner: CliRunner, command: str
 ) -> None:
@@ -38,3 +38,10 @@ def test_placeholder_commands_fail_without_simulating_success(
     assert result.exit_code == 2
     assert f"{command}: no implementado" in result.output
     assert "no se realizó ninguna acción" in result.output
+
+
+def test_ingest_rejects_an_unknown_source_without_contacting_a_source(runner: CliRunner) -> None:
+    result = runner.invoke(app, ["ingest", "--sources", "unknown"])
+
+    assert result.exit_code == 2
+    assert "Fuentes no reconocidas: unknown" in result.output

@@ -9,13 +9,18 @@ from typing import NoReturn
 
 import typer
 
+from baby_first_steps_medallion.bronze.service import (
+    BronzeIngestor,
+    BronzeUsageError,
+    build_default_adapters,
+)
 from baby_first_steps_medallion.config import Settings
 from baby_first_steps_medallion.logging import configure_logging
 from baby_first_steps_medallion.paths import build_runtime_paths, ensure_writable
 
 app = typer.Typer(
     add_completion=False,
-    help="Scaffold local de baby-first-steps-medallion; sin ingesta aún.",
+    help="Pipeline local de baby-first-steps-medallion.",
     no_args_is_help=True,
 )
 
@@ -89,9 +94,41 @@ def doctor() -> None:
 
 
 @app.command()
-def ingest() -> None:
-    """Reserved for the future Bronze step."""
-    _unavailable("ingest")
+def ingest(
+    sources: str | None = typer.Option(
+        None, help="Fuentes separadas por coma: pubmed,europe_pmc,openalex."
+    ),
+    profiles: str | None = typer.Option(
+        None, help="Perfiles separados por coma; por defecto se usan los tres perfiles Bronze."
+    ),
+    max_records_per_source: int | None = typer.Option(
+        None, min=1, help="Máximo total de registros por fuente; por defecto 20."
+    ),
+    resume: str | None = typer.Option(
+        None, help="Batch ID Bronze incompleto que se debe reanudar."
+    ),
+) -> None:
+    """Download real source responses into an immutable, resumable Bronze batch."""
+    settings = Settings.from_env()
+    adapters, client = build_default_adapters()
+    try:
+        manifest = BronzeIngestor(settings, adapters).ingest(
+            sources=sources,
+            profiles=profiles,
+            max_records_per_source=max_records_per_source,
+            resume=resume,
+        )
+    except BronzeUsageError as error:
+        raise typer.BadParameter(str(error)) from error
+    finally:
+        client.close()
+    typer.echo(
+        "Bronze batch "
+        f"{manifest['batch_id']}: {manifest['success_count']} respuestas, "
+        f"{manifest['failure_count']} fallos, {manifest['total_bytes']} bytes."
+    )
+    if manifest["failure_count"]:
+        raise typer.Exit(code=1)
 
 
 @app.command()

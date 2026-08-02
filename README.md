@@ -1,11 +1,11 @@
 # baby-first-steps-medallion
 
-Scaffold local y reproducible para una arquitectura medallón documental sobre
+Implementación local y reproducible de una arquitectura medallón documental sobre
 desarrollo temprano (0–36 meses). La recuperación final será exclusivamente en
 español; el corpus puede incluir documentos en español e inglés.
 
-Este commit sólo contiene el scaffold: no descarga fuentes, no crea tablas ni
-índices, y no simula éxito para los comandos de pipeline aún pendientes.
+Bronze ya descarga respuestas reales sin transformarlas. Silver, Gold, búsqueda,
+evidencia y demo aún no se implementan y no simulan éxito.
 
 ## Inicio local
 
@@ -21,8 +21,26 @@ python -m baby_first_steps_medallion.cli doctor
 pytest
 ```
 
-Los comandos `ingest`, `silver`, `gold`, `search`, `evidence` y `demo` están
-registrados deliberadamente como no implementados y salen con código 2.
+## Ingesta Bronze
+
+El alias instalable es `baby-first-steps`. El siguiente comando conserva los
+bytes originales de las respuestas de PubMed, Europe PMC y OpenAlex en un batch
+ignorado por Git; no parsea documentos, no crea DuckDB y no descarga PDFs.
+
+```powershell
+baby-first-steps ingest --sources pubmed,europe_pmc,openalex --profiles motor_sensory --max-records-per-source 20
+```
+
+Cada batch incluye `manifest.json`, `checksums.sha256`, `failures.jsonl` y, por
+fuente, pares de metadata de solicitud y payload original `.json` o `.xml`.
+Puede reanudarse una ejecución incompleta sin sustituir un payload existente:
+
+```powershell
+baby-first-steps ingest --resume <batch_id>
+```
+
+Los comandos `silver`, `gold`, `search`, `evidence` y `demo` siguen sin
+implementarse y salen con código 2.
 
 ## Docker
 
@@ -39,7 +57,8 @@ El único servicio es `pipeline`, se ejecuta sin privilegios de root y persiste
 
 ## Datos y seguridad
 
-- Bronze preservará bytes de respuesta sin transformarlos.
+- Bronze preserva bytes de respuesta sin transformarlos y calcula SHA-256 sobre
+  esos bytes.
 - Las transformaciones, cuarentena y deduplicación pertenecen a Silver.
 - Datos reales, DuckDB, modelos, embeddings e índices se excluyen de Git.
 - Los datos sintéticos sólo son válidos en `tests/fixtures/synthetic/` y las

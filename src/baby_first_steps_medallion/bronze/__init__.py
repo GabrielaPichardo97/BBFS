@@ -1,1 +1,1 @@
-"""Reserved for immutable byte-preserving Bronze ingestion."""
+"""Immutable HTTP-response acquisition for the Bronze layer."""
