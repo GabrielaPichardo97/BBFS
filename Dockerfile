@@ -22,4 +22,5 @@ RUN python -m pip install --no-deps --no-build-isolation . \
 
 USER app
 
-CMD ["python", "-m", "baby_first_steps_medallion.cli", "doctor"]
+ENTRYPOINT ["python", "-m", "baby_first_steps_medallion.cli"]
+CMD ["doctor"]

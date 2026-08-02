@@ -20,14 +20,14 @@ Validación ejecutada en esta fase: Ruff, mypy y 31 pruebas de pytest, incluidas
 
 ## Estado del entorno Docker
 
-La instalación de Docker Desktop se reintentó mediante el paquete oficial de
-`winget`. También se ejecutó la instalación elevada de WSL sin distribución de
-usuario. El diagnóstico de WSL confirma que WSL 2 no puede arrancar mientras la
-Plataforma de máquina virtual y la virtualización de firmware no estén
-habilitadas; ese cambio requiere reinicio y, si procede, acceso a BIOS/UEFI. Por
-ello, `docker compose config`, `docker compose build` y `docker compose run
---rm pipeline doctor` siguen pendientes de que WSL 2 y Docker Desktop puedan
-arrancar.
+Docker Desktop 4.84.0 y su motor 29.6.2 se verificaron tras habilitar WSL 2 y
+la Plataforma de máquina virtual. Se ejecutaron correctamente `docker compose
+config`, `docker compose build` y `docker compose run --rm pipeline doctor`.
+El contenedor informó Python 3.11.15, rutas escribibles y UID 10001 (no root).
+También se ejecutaron dentro de la imagen, con el repositorio montado como
+solo lectura, Ruff, mypy y las 31 pruebas de pytest: todos pasaron. El
+`ENTRYPOINT` de la imagen invoca la CLI, por lo que el argumento `doctor` del
+comando Compose se interpreta correctamente.
 
 ## Secuencia crítica posterior
 

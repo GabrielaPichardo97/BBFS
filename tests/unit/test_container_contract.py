@@ -11,6 +11,8 @@ def test_container_uses_a_non_root_user_and_owned_runtime_paths() -> None:
     assert "useradd --uid 10001" in dockerfile
     assert "chown -R app:app /app /home/app" in dockerfile
     assert "USER app" in dockerfile
+    assert 'ENTRYPOINT ["python", "-m", "baby_first_steps_medallion.cli"]' in dockerfile
+    assert 'CMD ["doctor"]' in dockerfile
 
 
 def test_compose_has_one_pipeline_service_with_data_and_hf_cache() -> None:
