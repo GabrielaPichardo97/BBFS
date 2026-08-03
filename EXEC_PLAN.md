@@ -84,6 +84,23 @@ limitaciones y estado `NOT VERIFIED` de GitHub Actions alojadas se documentan en
 queda fuera de este paso y es el Ãºnico bloqueo para que un clon predeterminado
 sea reproducible.
 
+## Actualización del informe técnico (completada)
+
+Se regeneró `output/pdf/bbfs-final-audit.pdf` como informe A4 de 12 páginas con
+resumen ejecutivo, diagrama de arquitectura, detalle Bronze/Silver/Gold,
+contratos Pydantic, cuarentena, staging/UPSERT, idempotencia, auditorías de
+duplicados, búsqueda E5/FAISS, matriz de 20 requisitos y anexos de terminal.
+La actualización usa una tercera ejecución Docker real con batches
+`20260803T043422262180Z-90bc82` y `20260803T043426533522Z-b102e3`; no versiona
+payloads, DuckDB, modelos, índice FAISS ni evidencia cruda.
+
+La evidencia calculada de esa ejecución obtuvo 10/10 criterios PASS, segunda
+corrida con cero inserciones y actualizaciones Silver/Gold, cero duplicados y
+seis búsquedas en español con resultados. El run alojado de GitHub Actions
+`30784482168` terminó con los dos jobs en `SUCCESS`. Las 12 páginas del PDF se
+renderizaron con Poppler y se inspeccionaron visualmente sin cortes ni
+solapamientos.
+
 ## Decisiones que no bloquean este plan
 
 - Rango propuesto: 0–36 meses.

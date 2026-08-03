@@ -216,3 +216,25 @@ rama implementada; no concede derechos adicionales sobre abstracts externos.
 
 El informe PDF derivado de esta auditorÃ­a se encuentra en
 `output/pdf/bbfs-final-audit.pdf`.
+
+## Actualización reproducible del informe PDF
+
+El informe se regeneró con una tercera ejecución Docker fresca sobre el mismo
+repositorio y commit auditado. Los lotes reales fueron
+`20260803T043422262180Z-90bc82` y `20260803T043426533522Z-b102e3`; la evidencia
+calculada volvió a obtener 10/10 criterios PASS, 10/10 payloads Bronze íntegros,
+3 registros en español, 7 en inglés, 3 rechazos reales en cuarentena y cero
+datos sintéticos en Bronze, Silver, Gold y evidencia.
+
+El reproceso exacto del primer lote produjo `rows_inserted=0`,
+`rows_updated=0`, `quarantine_inserted=0`, `embeddings_inserted=0` y
+`embeddings_updated=0`. Las auditorías de `canonical_id`, `quarantine_id` y
+`vector_id` devolvieron cero duplicados. Las seis consultas de aceptación se
+ejecutaron en español y devolvieron cinco resultados cada una mediante E5
+multilingüe y FAISS.
+
+El run alojado de GitHub Actions `30784482168` verificó el commit del PR con
+los jobs `Quality and unit tests` y `Docker and offline integration`, ambos en
+estado `SUCCESS`. El PDF actualizado contiene el diagrama de arquitectura, el
+desglose Bronze/Silver/Gold, tablas de contrato, idempotencia y duplicados, la
+matriz de 20 requisitos y anexos visuales de las salidas Docker reales.
