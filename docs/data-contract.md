@@ -36,7 +36,7 @@ El archivo de payload contiene sólo `response.content`. No se permite cargarlo,
 | `bronze_payload_sha256`, `bronze_record_locator` | obligatorios para procedencia |
 | `source_type` | debe ser `real`; cualquier otro valor se rechaza |
 
-Las transformaciones permitidas aquí incluyen extraer campos, decodificar, limpiar espacios, normalizar identificadores y estructurar autores/términos. No se modifica Bronze. La validación actual devuelve `ResourceRecord` solamente en memoria; no crea aún una tabla Silver ni ejecuta UPSERT.
+Las transformaciones permitidas aquí incluyen extraer campos, decodificar, limpiar espacios, normalizar identificadores y estructurar autores/términos. No se modifica Bronze. La validación produce `ResourceRecord` en memoria y la carga Silver posterior la persiste dentro de una única transacción DuckDB.
 
 ## SilverCanonicalDocument y procedencia
 
@@ -47,13 +47,36 @@ Las transformaciones permitidas aquí incluyen extraer campos, decodificar, limp
 1. Si existe DOI normalizado, `canonical_key = "doi:<doi>"`.
 2. Si no existe DOI y existe PMID, `canonical_key = "pmid:<pmid>"`.
 3. Si no existen los anteriores y el origen es OpenAlex, `canonical_key = "openalex:<W-id>"`.
-4. En último caso, `canonical_key = "<source_name>:<source_record_id>"`.
+4. En último caso, `canonical_key = "source:<source_name>:<source_record_id>"`.
 
-Dos registros se unen sólo por DOI igual normalizado o PMID igual. Nunca por título, similitud textual, URL temporal o hash del payload. El registro principal se selecciona de forma determinista: PubMed, Europe PMC, OpenAlex; los campos vacíos pueden completarse desde la siguiente procedencia, dejando registrada la fuente de cada valor. Una coincidencia posterior de DOI/PMID puede promover una clave de menor prioridad y debe mantener un alias estable para la clave anterior.
+Dos registros se unen sólo por DOI igual normalizado o PMID igual. Nunca por título, similitud textual, URL temporal o hash del payload. El registro principal se selecciona de forma determinista: abstract no vacío, abstract más completo, PubMed, Europe PMC, OpenAlex y `source_record_id` como desempate. La tabla de procedencia conserva cada representación fuente y los agregados `observed_sources` y `source_count` se acumulan en reprocesos de la misma clave canónica.
 
 ## Cuarentena
 
-`QuarantineRecord` incluye un `quarantine_id` determinista, identificador canónico candidato, fuente, locator Bronze, hash del registro crudo, fecha y una lista completa de errores. Hay una sola cuarentena por registro fuente aunque tenga varios errores. Sólo admite payloads reales y la validación actual la conserva en memoria; no crea una tabla ni ruta productiva para datos sintéticos.
+`QuarantineRecord` incluye un `quarantine_id` determinista, identificador canónico candidato, fuente, locator Bronze, hash del registro crudo, fecha y una lista completa de errores. Hay una sola cuarentena por registro fuente aunque tenga varios errores. `silver_rejects` usa ese identificador como clave primaria, por lo que un reproceso no duplica la cuarentena. Sólo admite payloads reales; no existe ruta productiva para datos sintéticos.
+
+## Persistencia Silver DuckDB
+
+La base local ignorada por Git es `data/baby_first_steps.duckdb`. La migración
+versionada `sql/001_silver_schema.sql` crea `meta_schema_version`,
+`bronze_batches`, `stg_resources`, `silver_resources`,
+`silver_resource_sources`, `silver_rejects`, `pipeline_runs` y `dq_metrics`.
+
+- Cada `silver --batch-id` inicia una transacción, vacía `stg_resources`, carga
+  sólo los registros ya validados de ese batch y conserva una fila principal por
+  `canonical_id` con prioridad determinista.
+- DuckDB 1.2 no implementa `MERGE`; la implementación realiza el UPSERT
+  equivalente mediante inserción o actualización de las filas deduplicadas de
+  staging dentro de la misma transacción.
+- `content_hash` igual incrementa `rows_noop` y no cambia `updated_at`.
+  Un hash diferente incrementa `rows_updated` y actualiza sólo los campos
+  funcionales. Una clave inexistente incrementa `rows_inserted`.
+- Un fallo revierte staging, lotes, recursos, procedencias, cuarentenas y
+  métricas de esa transacción; `pipeline_runs` conserva un run separado con
+  estado `failed` y el mensaje de error.
+- `audit-duplicates` ejecuta las consultas de aceptación de recursos y
+  cuarentenas, y además exige cero filas con `source_type='synthetic'` en las
+  cuatro tablas de datos Silver.
 
 ## GoldSearchDocument
 

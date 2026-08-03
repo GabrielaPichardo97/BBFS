@@ -4,8 +4,9 @@ Implementación local y reproducible de una arquitectura medallón documental so
 desarrollo temprano (0–36 meses). La recuperación final será exclusivamente en
 español; el corpus puede incluir documentos en español e inglés.
 
-Bronze ya descarga respuestas reales sin transformarlas. Silver, Gold, búsqueda,
-evidencia y demo aún no se implementan y no simulan éxito.
+Bronze descarga respuestas reales sin transformarlas y Silver las valida y
+persiste de forma idempotente en DuckDB. Gold, búsqueda, evidencia y demo aún
+no se implementan y no simulan éxito.
 
 ## Inicio local
 
@@ -39,8 +40,8 @@ Puede reanudarse una ejecución incompleta sin sustituir un payload existente:
 baby-first-steps ingest --resume <batch_id>
 ```
 
-Los comandos `silver`, `gold`, `search`, `evidence` y `demo` siguen sin
-implementarse y salen con código 2.
+Los comandos `gold`, `search`, `evidence` y `demo` siguen sin implementarse y
+salen con código 2.
 
 ## Validación Silver temporal
 
@@ -56,6 +57,22 @@ baby-first-steps silver-validate --batch-id <batch_id>
 El comando informa conteos por fuente, registros válidos, cuarentenas reales,
 errores de parseo y proporción de abstracts ausentes. Los fixtures sintéticos
 no se aceptan en rutas Bronze productivas.
+
+## Carga Silver en DuckDB
+
+La carga Silver vuelve a validar el batch y persiste sólo registros reales en
+`data/baby_first_steps.duckdb`. Ejecuta migraciones SQL versionadas, vacía
+staging, deduplica por DOI o PMID, conserva procedencias y hace UPSERT
+idempotente. Un error revierte Silver y deja el run con estado fallido.
+
+```powershell
+baby-first-steps silver --batch-id <batch_id>
+baby-first-steps audit-duplicates
+baby-first-steps show-runs
+```
+
+`audit-duplicates` falla si existen claves canónicas, cuarentenas o filas
+`source_type='synthetic'` duplicadas/no permitidas. DuckDB se ignora en Git.
 
 ## Docker
 

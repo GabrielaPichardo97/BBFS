@@ -18,6 +18,7 @@ from baby_first_steps_medallion.bronze.service import (
 from baby_first_steps_medallion.config import Settings
 from baby_first_steps_medallion.logging import configure_logging
 from baby_first_steps_medallion.paths import build_runtime_paths, ensure_writable
+from baby_first_steps_medallion.silver.persistence import SilverPersistenceError, SilverRepository
 from baby_first_steps_medallion.silver.service import SilverValidationError, SilverValidator
 
 app = typer.Typer(
@@ -148,9 +149,49 @@ def silver_validate(
 
 
 @app.command()
-def silver() -> None:
-    """Reserved for the future Silver step."""
-    _unavailable("silver")
+def silver(
+    batch_id: str = typer.Option(
+        ..., help="Batch Bronze local que se cargará de forma idempotente."
+    ),
+) -> None:
+    """Validate and persist one local Bronze batch into transactional DuckDB Silver."""
+    settings = Settings.from_env()
+    try:
+        validation = SilverValidator(settings).validate_batch(batch_id)
+        persistence = SilverRepository(settings).persist(validation)
+    except (SilverValidationError, SilverPersistenceError) as error:
+        typer.echo(f"silver: {error}", err=True)
+        raise typer.Exit(code=1) from error
+    typer.echo(
+        json.dumps(
+            {"validation": validation.metrics(), "persistence": persistence.as_dict()},
+            ensure_ascii=False,
+            indent=2,
+            sort_keys=True,
+        )
+    )
+
+
+@app.command("audit-duplicates")
+def audit_duplicates() -> None:
+    """Fail if the persisted Silver tables contain duplicate or synthetic rows."""
+    try:
+        audit = SilverRepository(Settings.from_env()).audit_duplicates()
+    except SilverPersistenceError as error:
+        typer.echo(f"audit-duplicates: {error}", err=True)
+        raise typer.Exit(code=1) from error
+    typer.echo(json.dumps(audit.as_dict(), ensure_ascii=False, indent=2, sort_keys=True))
+
+
+@app.command("show-runs")
+def show_runs(limit: int = typer.Option(20, min=1, max=100)) -> None:
+    """Show recent Silver pipeline runs without exposing raw source payloads."""
+    try:
+        runs = SilverRepository(Settings.from_env()).show_runs(limit=limit)
+    except SilverPersistenceError as error:
+        typer.echo(f"show-runs: {error}", err=True)
+        raise typer.Exit(code=1) from error
+    typer.echo(json.dumps(runs, ensure_ascii=False, indent=2, sort_keys=True, default=str))
 
 
 @app.command()

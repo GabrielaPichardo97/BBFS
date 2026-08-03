@@ -4,7 +4,14 @@ from pathlib import Path
 
 import pytest
 
-from baby_first_steps_medallion.config import Settings
+from baby_first_steps_medallion.config import Settings, project_root
+
+
+def test_project_root_contains_versioned_sql_migrations() -> None:
+    root = project_root()
+
+    assert (root / "pyproject.toml").is_file()
+    assert (root / "sql" / "001_silver_schema.sql").is_file()
 
 
 def test_settings_use_expected_defaults(monkeypatch: pytest.MonkeyPatch) -> None:

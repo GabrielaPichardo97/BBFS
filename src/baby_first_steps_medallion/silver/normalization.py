@@ -77,7 +77,7 @@ def canonical_id_for(
         return f"pmid:{normalized_pmid}"
     if source_name == "openalex" and normalized_openalex_id is not None:
         return f"openalex:{normalized_openalex_id}"
-    return f"{source_name}:{normalize_text(source_record_id)}"
+    return f"source:{source_name}:{normalize_text(source_record_id)}"
 
 
 def content_hash_for(record: dict[str, Any]) -> str:

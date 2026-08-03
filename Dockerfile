@@ -16,6 +16,7 @@ RUN python -m pip install --requirement requirements.lock
 
 COPY pyproject.toml README.md ./
 COPY src ./src
+COPY sql ./sql
 RUN python -m pip install --no-deps --no-build-isolation . \
     && mkdir -p /app/data /app/artifacts "$HF_HOME" \
     && chown -R app:app /app /home/app

@@ -10,8 +10,13 @@ VALID_LOG_LEVELS = frozenset({"CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG"})
 
 
 def project_root() -> Path:
-    """Return the repository root from the installed source layout."""
-    return Path(__file__).resolve().parents[2]
+    """Return the runnable project root for source and installed-package layouts."""
+    package_path = Path(__file__).resolve()
+    candidates = (Path.cwd(), *package_path.parents)
+    for candidate in candidates:
+        if (candidate / "pyproject.toml").is_file() and (candidate / "sql").is_dir():
+            return candidate.resolve()
+    return package_path.parents[2]
 
 
 def _path_from_env(name: str, default: Path) -> Path:

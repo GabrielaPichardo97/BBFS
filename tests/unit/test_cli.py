@@ -25,11 +25,11 @@ def test_doctor_succeeds_without_optional_libraries(
     assert result.exit_code == 0, result.output
     assert "[OK] python" in result.output
     assert "[OK] secretos_obligatorios: ninguno requerido" in result.output
-    assert "[SKIP] duckdb" in result.output
+    assert "[OK] duckdb" in result.output
     assert "[SKIP] faiss" in result.output
 
 
-@pytest.mark.parametrize("command", ["silver", "gold", "search", "evidence", "demo"])
+@pytest.mark.parametrize("command", ["gold", "search", "evidence", "demo"])
 def test_placeholder_commands_fail_without_simulating_success(
     runner: CliRunner, command: str
 ) -> None:
@@ -55,4 +55,31 @@ def test_silver_validate_rejects_a_missing_local_batch_without_network(
     result = runner.invoke(app, ["silver-validate", "--batch-id", "missing-batch"])
 
     assert result.exit_code == 2
+    assert "No se encontr" in result.output
+
+
+def test_silver_persistence_commands_operate_on_an_empty_local_database(
+    runner: CliRunner, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.setenv("BFSM_DATA_DIR", str(tmp_path / "data"))
+    monkeypatch.setenv("BFSM_ARTIFACTS_DIR", str(tmp_path / "artifacts"))
+
+    audit = runner.invoke(app, ["audit-duplicates"])
+    runs = runner.invoke(app, ["show-runs"])
+
+    assert audit.exit_code == 0, audit.output
+    assert '"resource_duplicates": 0' in audit.output
+    assert '"synthetic_rows": 0' in audit.output
+    assert runs.exit_code == 0, runs.output
+    assert runs.output.strip() == "[]"
+
+
+def test_silver_rejects_a_missing_bronze_batch_without_network(
+    runner: CliRunner, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.setenv("BFSM_DATA_DIR", str(tmp_path / "data"))
+
+    result = runner.invoke(app, ["silver", "--batch-id", "missing-batch"])
+
+    assert result.exit_code == 1
     assert "No se encontr" in result.output
