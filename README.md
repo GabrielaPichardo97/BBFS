@@ -42,6 +42,21 @@ baby-first-steps ingest --resume <batch_id>
 Los comandos `silver`, `gold`, `search`, `evidence` y `demo` siguen sin
 implementarse y salen con código 2.
 
+## Validación Silver temporal
+
+La validación Silver lee exclusivamente un batch Bronze local, verifica los
+SHA-256 y aplica el contrato Pydantic v2 en memoria. No descarga datos, no crea
+DuckDB, no escribe una tabla Silver ni realiza UPSERT. El umbral inicial de
+abstract es 80 caracteres.
+
+```powershell
+baby-first-steps silver-validate --batch-id <batch_id>
+```
+
+El comando informa conteos por fuente, registros válidos, cuarentenas reales,
+errores de parseo y proporción de abstracts ausentes. Los fixtures sintéticos
+no se aceptan en rutas Bronze productivas.
+
 ## Docker
 
 Cuando Docker Compose esté disponible:

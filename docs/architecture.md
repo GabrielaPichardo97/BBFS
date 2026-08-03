@@ -30,6 +30,7 @@ SciELO no está en el flujo crítico. Sólo puede añadirse como cuarto adaptado
 
 - Entrada: bytes Bronze y manifest de la misma respuesta.
 - Procesos: parseo por fuente, Pydantic v2, normalización de DOI/PMID, selección de clave, deduplicación determinista y procedencia múltiple.
+- Implementación actual: `silver-validate` lee un batch Bronze local, verifica hashes y genera registros y cuarentenas sólo en memoria. No hace llamadas HTTP ni persiste Silver.
 - Salidas: documento canónico, una o más filas de procedencia y cuarentena auditable para datos reales inválidos.
 - Almacén futuro: DuckDB local con staging transitorio y UPSERT transaccional.
 - Idempotencia: reejecutar el mismo manifest no crea una nueva entidad ni una nueva procedencia idéntica.

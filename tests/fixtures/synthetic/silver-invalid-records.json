@@ -1,0 +1,46 @@
+{
+  "base": {
+    "canonical_id": "doi:10.9999/synthetic-record-0001",
+    "source_name": "pubmed",
+    "source_record_id": "98765432101",
+    "observed_sources": ["pubmed"],
+    "doi": "10.9999/synthetic-record-0001",
+    "pmid": "98765432101",
+    "openalex_id": null,
+    "title": "SYNTHETIC VALIDATION RECORD — NEVER INGEST",
+    "abstract": "SYNTHETIC TEST ABSTRACT — NEVER INGEST. This deliberately artificial text exceeds the validation threshold for isolated unit tests.",
+    "language": "eng",
+    "publication_date": "2020-01-02",
+    "authors": ["Synthetic Author"],
+    "journal_or_publisher": "Synthetic Journal",
+    "keywords": ["synthetic"],
+    "subject_terms": ["test-only"],
+    "resource_url": "https://example.invalid/synthetic-record-0001",
+    "query_profiles": ["motor_sensory"],
+    "source_batch_id": "synthetic-batch-never-ingest",
+    "source_file": "synthetic/never-ingest.json",
+    "source_ordinal": 1,
+    "raw_payload_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "content_hash": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+  },
+  "cases": [
+    {"case": "missing_source_identifier", "overrides": {"source_record_id": ""}},
+    {"case": "empty_title", "overrides": {"title": "   "}},
+    {"case": "missing_abstract", "overrides": {"abstract": ""}},
+    {"case": "short_abstract", "overrides": {"abstract": "too short"}},
+    {"case": "invalid_doi", "overrides": {"doi": "not-a-doi"}},
+    {"case": "invalid_url", "overrides": {"resource_url": "ftp://example.invalid/not-allowed"}},
+    {"case": "future_date", "overrides": {"publication_date": "2999-01-01"}},
+    {"case": "invalid_authors", "overrides": {"authors": "not-a-list"}},
+    {"case": "unexpected_field", "overrides": {"unexpected_api_field": "must not enter ResourceRecord"}},
+    {
+      "case": "multiple_errors",
+      "overrides": {
+        "title": "",
+        "abstract": "short",
+        "doi": "invalid-doi",
+        "resource_url": "not a URL"
+      }
+    }
+  ]
+}

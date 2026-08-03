@@ -1,6 +1,7 @@
 # Locked direct and transitive Python dependencies for Python 3.11.
 # Install with: python -m pip install -r requirements.lock
 anyio==4.14.2
+annotated-types==0.7.0
 certifi==2026.7.22
 click==8.1.8
 colorama==0.4.6 ; sys_platform == "win32"
@@ -16,6 +17,8 @@ mypy_extensions==1.0.0
 packaging==24.2
 pathspec==0.12.1
 pluggy==1.5.0
+pydantic==2.10.6
+pydantic_core==2.27.2
 pygments==2.19.1
 pytest==8.3.5
 rich==13.9.4
@@ -24,3 +27,4 @@ shellingham==1.5.4
 setuptools==75.8.0
 typer==0.15.1
 typing_extensions==4.12.2
+typing-inspection==0.4.0

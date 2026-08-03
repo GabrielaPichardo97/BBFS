@@ -45,3 +45,14 @@ def test_ingest_rejects_an_unknown_source_without_contacting_a_source(runner: Cl
 
     assert result.exit_code == 2
     assert "Fuentes no reconocidas: unknown" in result.output
+
+
+def test_silver_validate_rejects_a_missing_local_batch_without_network(
+    runner: CliRunner, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.setenv("BFSM_DATA_DIR", str(tmp_path / "data"))
+
+    result = runner.invoke(app, ["silver-validate", "--batch-id", "missing-batch"])
+
+    assert result.exit_code == 2
+    assert "No se encontr" in result.output

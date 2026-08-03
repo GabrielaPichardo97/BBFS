@@ -8,15 +8,15 @@
 | 1. Diseño definitivo | PRD, contratos, arquitectura, fuentes y ADRs de esta entrega | Completado |
 | 2. Esqueleto local | Paquete, configuración, dependencias, contenedor y pruebas mínimas | Completado |
 | 3. Bronze | Adaptadores PubMed, Europe PMC y OpenAlex; bytes crudos, manifiestos e idempotencia de descarga | Completado |
-| 4. Silver | Pydantic v2, cuarentena, canonicalización, staging y UPSERT DuckDB | Pendiente |
+| 4. Silver | Pydantic v2, cuarentena, canonicalización, staging y UPSERT DuckDB | En curso: extracción y validación temporal completadas; staging y UPSERT pendientes |
 | 5. Gold | Corpus, embeddings multilingües, FAISS incremental y consulta española | Pendiente |
 | 6. Operación | Docker Compose, evidencia generada por código y GitHub Actions | Pendiente |
 
-## Paso activo cerrado: Bronze
+## Paso activo: Silver (extracción y validación temporal)
 
-Esta fase implementa exclusivamente Bronze: adaptadores nativos de PubMed, Europe PMC y OpenAlex; reintentos limitados, `Retry-After`, límites por fuente, batches reanudables, manifiestos y checksums. Cada respuesta exitosa se persiste desde `response.content` como bytes opacos; no se parsean documentos ni se implementan tablas, DuckDB, Silver, Gold, FAISS ni modelos.
+Silver lee exclusivamente bytes existentes en `data/bronze/<batch_id>/`, verifica su SHA-256 y extrae registros en memoria con parsers de PubMed, Europe PMC y OpenAlex. `ResourceRecord` usa Pydantic v2 estricto; normaliza solamente Unicode, espacios e identificadores permitidos. Los registros inválidos generan una sola cuarentena auditable en memoria con todos sus errores. No realiza llamadas HTTP, no escribe payloads Bronze, no crea una tabla Silver, DuckDB, staging ni UPSERT.
 
-Validación ejecutada en esta fase: Ruff, mypy y 31 pruebas de pytest, incluidas pruebas sin red de inmutabilidad byte a byte, XML/JSON, reintentos, errores definitivos, escritura atómica, colisiones, manifest y reanudación. También se ejecutó una ingesta real limitada a 20 registros por fuente, que produjo cuatro respuestas HTTP y cero fallos; se validaron sus SHA-256 y que los payloads están ignorados por Git. La reanudación del mismo batch no solicitó ni sustituyó payloads.
+Validación ejecutada en esta fase: Ruff, mypy y 51 pruebas de pytest, incluidas pruebas sin red de inmutabilidad byte a byte, XML/JSON, reintentos, errores definitivos, escritura atómica, colisiones, manifest, reanudación, Pydantic v2, parsers Silver, cuarentena determinista, clave natural, estabilidad de `content_hash` y rechazo de `source_type='synthetic'`. También se ejecutaron `silver-validate` sobre dos batches reales ya locales: 18 y 1 registros PubMed válidos respectivamente; Europe PMC y OpenAlex devolvieron cero registros en esas muestras. Hubo cero rechazos reales, cero fallos de parseo y cero abstracts ausentes entre los 19 registros extraídos. El umbral inicial de 80 caracteres no rechazó contenido observado.
 
 ## Estado del entorno Docker
 
@@ -31,8 +31,7 @@ comando Compose se interpreta correctamente.
 
 ## Secuencia crítica posterior
 
-1. Añadir los modelos Pydantic v2 y la prueba de exclusión de `source_type='synthetic'` antes de habilitar Silver.
-2. Implementar staging y UPSERT idempotente en DuckDB antes de embeddings.
+1. Implementar staging y UPSERT idempotente en DuckDB antes de embeddings.
 3. Construir Gold/FAISS sólo desde Silver válido y ejecutar las consultas de aceptación en español.
 4. Añadir contenedores y CI cuando el recorrido local cumpla la matriz de aceptación.
 

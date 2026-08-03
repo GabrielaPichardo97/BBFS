@@ -12,6 +12,7 @@ license = { text = "MIT" }
 authors = [{ name = "BBFS contributors" }]
 dependencies = [
   "httpx==0.28.1",
+  "pydantic==2.10.6",
   "typer==0.15.1",
 ]
 

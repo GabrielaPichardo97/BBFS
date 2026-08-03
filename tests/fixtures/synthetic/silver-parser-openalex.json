@@ -1,0 +1,35 @@
+{
+  "results": [
+    {
+      "id": "https://openalex.org/W999999999999999999",
+      "doi": "10.9999/synthetic-openalex-0001",
+      "title": "SYNTHETIC OPENALEX TITLE — NEVER INGEST",
+      "abstract_inverted_index": {
+        "SYNTHETIC": [0],
+        "OPENALEX": [1],
+        "ABSTRACT": [2],
+        "NEVER": [3],
+        "INGEST.": [4],
+        "This": [5],
+        "artificial": [6],
+        "fixture": [7],
+        "contains": [8],
+        "enough": [9],
+        "words": [10],
+        "to": [11],
+        "exercise": [12],
+        "the": [13],
+        "Silver": [14],
+        "parser": [15],
+        "only.": [16]
+      },
+      "language": "eng",
+      "publication_date": "2020-01-02",
+      "authorships": [{"author": {"display_name": "Synthetic Author"}}],
+      "primary_location": {"source": {"display_name": "Synthetic Journal"}},
+      "keywords": [{"display_name": "synthetic"}],
+      "concepts": [{"display_name": "Test Data"}],
+      "ids": {}
+    }
+  ]
+}

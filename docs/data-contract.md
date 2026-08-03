@@ -23,7 +23,7 @@ El manifest es metadata de la descarga, no una transformación del payload.
 
 El archivo de payload contiene sólo `response.content`. No se permite cargarlo, reserializarlo ni usar un objeto JSON/XML como sustituto de esos bytes.
 
-## SilverDocumentCandidate (Pydantic v2 futuro)
+## ResourceRecord Silver (Pydantic v2)
 
 | Campo | Regla |
 | --- | --- |
@@ -36,7 +36,7 @@ El archivo de payload contiene sólo `response.content`. No se permite cargarlo,
 | `bronze_payload_sha256`, `bronze_record_locator` | obligatorios para procedencia |
 | `source_type` | debe ser `real`; cualquier otro valor se rechaza |
 
-Las transformaciones permitidas aquí incluyen extraer campos, decodificar, limpiar espacios, normalizar identificadores y estructurar autores/términos. No se modifica Bronze.
+Las transformaciones permitidas aquí incluyen extraer campos, decodificar, limpiar espacios, normalizar identificadores y estructurar autores/términos. No se modifica Bronze. La validación actual devuelve `ResourceRecord` solamente en memoria; no crea aún una tabla Silver ni ejecuta UPSERT.
 
 ## SilverCanonicalDocument y procedencia
 
@@ -53,7 +53,7 @@ Dos registros se unen sólo por DOI igual normalizado o PMID igual. Nunca por t�
 
 ## Cuarentena
 
-`QuarantineEvent` incluye `run_id`, fuente, locator Bronze, `reason_code`, detalle seguro, fecha y hash del payload. Sólo admite payloads reales. No crea una tabla ni ruta productiva para datos sintéticos.
+`QuarantineRecord` incluye un `quarantine_id` determinista, identificador canónico candidato, fuente, locator Bronze, hash del registro crudo, fecha y una lista completa de errores. Hay una sola cuarentena por registro fuente aunque tenga varios errores. Sólo admite payloads reales y la validación actual la conserva en memoria; no crea una tabla ni ruta productiva para datos sintéticos.
 
 ## GoldSearchDocument
 

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 import sys
 from dataclasses import dataclass
 from typing import NoReturn
@@ -17,6 +18,7 @@ from baby_first_steps_medallion.bronze.service import (
 from baby_first_steps_medallion.config import Settings
 from baby_first_steps_medallion.logging import configure_logging
 from baby_first_steps_medallion.paths import build_runtime_paths, ensure_writable
+from baby_first_steps_medallion.silver.service import SilverValidationError, SilverValidator
 
 app = typer.Typer(
     add_completion=False,
@@ -129,6 +131,20 @@ def ingest(
     )
     if manifest["failure_count"]:
         raise typer.Exit(code=1)
+
+
+@app.command("silver-validate")
+def silver_validate(
+    batch_id: str = typer.Option(..., help="Batch Bronze local para validar sin persistir Silver."),
+) -> None:
+    """Extract and validate one local Bronze batch without a Silver UPSERT."""
+    settings = Settings.from_env()
+    try:
+        result = SilverValidator(settings).validate_batch(batch_id)
+    except SilverValidationError as error:
+        typer.echo(f"silver-validate: {error}", err=True)
+        raise typer.Exit(code=2) from error
+    typer.echo(json.dumps(result.metrics(), ensure_ascii=False, indent=2, sort_keys=True))
 
 
 @app.command()
