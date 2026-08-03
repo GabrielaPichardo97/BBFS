@@ -13,6 +13,7 @@ def test_runtime_outputs_and_credentials_are_ignored() -> None:
         "data/*.duckdb",
         "data/gold/**",
         "artifacts/*",
+        "docs/evidence.generated.md",
         "data/models/**",
         "*.faiss",
         ".env",

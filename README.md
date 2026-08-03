@@ -118,6 +118,45 @@ docker compose run --rm pipeline gold
 docker compose run --rm pipeline search "lectura compartida durante los primeros años de vida" --top-k 5
 ```
 
+## Demostración y evidencia reproducible
+
+El recorrido de aceptación no usa notebooks. El comando principal verifica el
+entorno, elimina únicamente salidas generadas conocidas, adquiere dos batches
+reales distintos de PubMed, Europe PMC y OpenAlex, procesa sólo el primero en
+Silver/Gold y lo reprocesa sin volver a consultar las APIs. Después ejecuta
+duplicados, seis consultas en español y las salvaguardas contra datos sintéticos.
+
+```powershell
+baby-first-steps demo --fresh
+# Sin pregunta interactiva, por ejemplo para CI local:
+baby-first-steps demo --fresh --yes
+baby-first-steps evidence
+```
+
+`--fresh` sólo elimina `data/bronze`, `data/gold`, la DuckDB local, cachés/modelos
+locales bajo `data/`, los artifacts de ejecución conocidos y
+`docs/evidence.generated.md`. No elimina código, fixtures, `.gitkeep` ni otros
+archivos del usuario. La confirmación es obligatoria salvo con `--yes`.
+
+La ejecución genera los archivos ignorados por Git:
+
+- `artifacts/evidence.json`, `artifacts/evidence.csv` y `artifacts/run.log`;
+- `docs/evidence.generated.md`.
+
+El JSON incluye tablas Bronze, contrato, idempotencia, SQL exacto de duplicados,
+seis resultados de búsqueda y los cuatro conteos calculados de seguridad
+sintética. `evidence` sólo vuelve a renderizar CSV, log y Markdown desde ese
+JSON; no llama APIs. El script equivalente es
+`python scripts/run_demo.py --fresh --yes`.
+
+Los atajos disponibles son `make build`, `make test`, `make demo`,
+`make evidence` y `make clean-generated`. En Docker se usan:
+
+```powershell
+docker compose run --rm pipeline demo --fresh --yes
+docker compose run --rm pipeline evidence
+```
+
 ## Datos y seguridad
 
 - Bronze preserva bytes de respuesta sin transformarlos y calcula SHA-256 sobre

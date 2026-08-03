@@ -24,6 +24,7 @@ data/models/**
 data/cache/**
 artifacts/*
 !artifacts/.gitkeep
+docs/evidence.generated.md
 models/**
 *.faiss
 *.index

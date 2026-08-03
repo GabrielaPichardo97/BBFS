@@ -122,3 +122,18 @@ Antes de cerrar el paso Silver, una prueba automatizada debe:
 4. Verificar que Gold/FAISS no recibe ese fixture y que la evidencia Gold no lo expone.
 
 La matriz de aceptación no podrá marcar estos criterios como PASS sin ejecutar dicha prueba.
+
+## Evidencia de demostración
+
+`baby-first-steps demo --fresh` genera `artifacts/evidence.json` como registro
+primario de la demostración. Sus vistas CSV, log y Markdown se derivan de ese
+JSON y no vuelven a consultar fuentes. La evidencia conserva sólo métricas,
+rutas Bronze relativas, metadatos de búsqueda y SQL de auditoría; no conserva
+payloads ni texto completo.
+
+La sección `synthetic_safety` se calcula desde los manifests Bronze, las tablas
+DuckDB y el propio documento de evidencia. Debe contener exactamente
+`synthetic_records_in_bronze`, `synthetic_records_in_silver`,
+`synthetic_records_in_gold` y `synthetic_records_in_evidence`, todos en cero.
+El renderizador rechaza cualquier `source_type='synthetic'` antes de escribir
+un artifact productivo.

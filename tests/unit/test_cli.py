@@ -29,15 +29,19 @@ def test_doctor_succeeds_without_optional_libraries(
     assert "[OK] faiss" in result.output
 
 
-@pytest.mark.parametrize("command", ["evidence", "demo"])
-def test_placeholder_commands_fail_without_simulating_success(
-    runner: CliRunner, command: str
+def test_demo_requires_fresh_and_evidence_requires_a_prior_run(
+    runner: CliRunner, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
-    result = runner.invoke(app, [command])
+    monkeypatch.setenv("BFSM_DATA_DIR", str(tmp_path / "data"))
+    monkeypatch.setenv("BFSM_ARTIFACTS_DIR", str(tmp_path / "artifacts"))
 
-    assert result.exit_code == 2
-    assert f"{command}: no implementado" in result.output
-    assert "no se realizó ninguna acción" in result.output
+    demo = runner.invoke(app, ["demo"])
+    evidence = runner.invoke(app, ["evidence"])
+
+    assert demo.exit_code == 2
+    assert "requiere --fresh" in demo.output
+    assert evidence.exit_code == 1
+    assert "No existe evidencia JSON válida" in evidence.output
 
 
 def test_ingest_rejects_an_unknown_source_without_contacting_a_source(runner: CliRunner) -> None:

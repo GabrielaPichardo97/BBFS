@@ -20,6 +20,7 @@ def test_compose_has_one_pipeline_service_with_data_and_hf_cache() -> None:
 
     assert "  pipeline:" in compose
     assert "./data:/app/data" in compose
+    assert "./docs:/app/docs" in compose
     assert "hf-cache:/home/app/.cache/huggingface" in compose
     assert "HF_HOME: /home/app/.cache/huggingface" in compose
 

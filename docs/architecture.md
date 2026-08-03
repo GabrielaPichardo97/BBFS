@@ -67,3 +67,19 @@ SciELO no está en el flujo crítico. Sólo puede añadirse como cuarto adaptado
 3. Comando de construcción Gold/FAISS que rechaza una entrada no Silver o sintética.
 4. Docker Compose sólo envolverá ese flujo local probado; no añadirá servicios externos.
 5. CI ejecutará pruebas, demostración española y evidencia agregada; los payloads reales serán artifacts efímeros, no commits.
+
+## Demostración reproducible
+
+`baby-first-steps demo --fresh` es el recorrido ejecutable de la rúbrica, no un
+notebook. Verifica prerrequisitos locales, solicita confirmación de la limpieza
+o acepta `--yes`, y elimina sólo rutas generadas conocidas dentro del proyecto.
+Adquiere dos batches Bronze reales con IDs distintos usando los tres adaptadores;
+selecciona explícitamente el primero para Silver y Gold. La segunda corrida
+revalida y reprocesa exactamente ese batch local, por lo que no llama las APIs.
+
+La evidencia se crea mediante código bajo `artifacts/` y
+`docs/evidence.generated.md`, ambos ignorados por Git. Incluye tablas de Bronze
+y contrato, métricas de idempotencia, SQL exacto de duplicados, seis consultas
+en español y los conteos calculados de `source_type='synthetic'` en Bronze,
+Silver, Gold y la propia evidencia. Cualquier criterio no satisfecho termina el
+comando con código no cero.

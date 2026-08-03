@@ -6,7 +6,6 @@ import importlib.util
 import json
 import sys
 from dataclasses import dataclass
-from typing import NoReturn
 
 import typer
 
@@ -16,6 +15,13 @@ from baby_first_steps_medallion.bronze.service import (
     build_default_adapters,
 )
 from baby_first_steps_medallion.config import Settings
+from baby_first_steps_medallion.evidence.demo import (
+    DEFAULT_MAX_RECORDS_PER_SOURCE,
+    DemoError,
+    DemoService,
+    EvidenceError,
+    GeneratedPathCleaner,
+)
 from baby_first_steps_medallion.gold.service import GoldError, GoldRepository
 from baby_first_steps_medallion.logging import configure_logging
 from baby_first_steps_medallion.paths import build_runtime_paths, ensure_writable
@@ -78,11 +84,6 @@ def run_doctor(settings: Settings) -> list[DoctorCheck]:
     checks.append(_optional_library_check("duckdb", "duckdb"))
     checks.append(_optional_library_check("faiss", "faiss"))
     return checks
-
-
-def _unavailable(command: str) -> NoReturn:
-    typer.echo(f"{command}: no implementado en este scaffold; no se realizó ninguna acción.")
-    raise typer.Exit(code=2)
 
 
 @app.command()
@@ -238,14 +239,68 @@ def search(
 
 @app.command()
 def evidence() -> None:
-    """Reserved for future generated execution evidence."""
-    _unavailable("evidence")
+    """Render CSV, log, and Markdown evidence from a completed demonstration."""
+    try:
+        paths = DemoService(Settings.from_env()).render_existing_evidence()
+    except EvidenceError as error:
+        typer.echo(f"evidence: {error}", err=True)
+        raise typer.Exit(code=1) from error
+    typer.echo(
+        json.dumps(
+            {"evidence_csv": str(paths[0]), "run_log": str(paths[1]), "markdown": str(paths[2])},
+            ensure_ascii=False,
+            indent=2,
+            sort_keys=True,
+        )
+    )
 
 
 @app.command()
-def demo() -> None:
-    """Reserved for the future Spanish-only demonstration."""
-    _unavailable("demo")
+def demo(
+    fresh: bool = typer.Option(
+        False, "--fresh", help="Limpiar sólo las salidas generadas conocidas."
+    ),
+    yes: bool = typer.Option(False, "--yes", help="Confirmar la limpieza sin interacción."),
+    max_records_per_source: int = typer.Option(
+        DEFAULT_MAX_RECORDS_PER_SOURCE,
+        min=1,
+        help="Máximo de registros recuperados por fuente en cada batch de demostración.",
+    ),
+) -> None:
+    """Run the complete two-batch real-data demonstration and generate evidence."""
+    if not fresh:
+        typer.echo("demo: se requiere --fresh para una demostración reproducible.", err=True)
+        raise typer.Exit(code=2)
+    if not yes and not typer.confirm(
+        "Se eliminarán únicamente salidas generadas conocidas de data/, artifacts/ "
+        "y docs/evidence.generated.md. ¿Continuar?"
+    ):
+        typer.echo("demo: cancelado; no se eliminó ningún archivo.", err=True)
+        raise typer.Exit(code=1)
+    try:
+        result = DemoService(Settings.from_env()).run(
+            fresh=True, max_records_per_source=max_records_per_source
+        )
+    except DemoError as error:
+        typer.echo(f"demo: {error}", err=True)
+        raise typer.Exit(code=1) from error
+    typer.echo(json.dumps(result.as_dict(), ensure_ascii=False, indent=2, sort_keys=True))
+
+
+@app.command("clean-generated")
+def clean_generated(
+    yes: bool = typer.Option(False, "--yes", help="Confirmar la limpieza sin interacción."),
+) -> None:
+    """Remove only known generated project outputs; it never removes source or fixture files."""
+    if not yes and not typer.confirm(
+        "Se eliminarán únicamente salidas generadas conocidas del proyecto. ¿Continuar?"
+    ):
+        typer.echo("clean-generated: cancelado; no se eliminó ningún archivo.", err=True)
+        raise typer.Exit(code=1)
+    removed = GeneratedPathCleaner(Settings.from_env()).clean()
+    typer.echo(
+        json.dumps({"removed": [str(path) for path in removed]}, ensure_ascii=False, indent=2)
+    )
 
 
 def main() -> None:

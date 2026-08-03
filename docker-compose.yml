@@ -10,6 +10,7 @@ services:
     volumes:
       - ./data:/app/data
       - ./artifacts:/app/artifacts
+      - ./docs:/app/docs
       - hf-cache:/home/app/.cache/huggingface
 
 volumes:
