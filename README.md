@@ -84,6 +84,7 @@ usuario no root `10001`. No incluye CUDA ni requiere GPU.
 docker compose config
 docker compose build
 docker compose run --rm pipeline doctor
+docker compose run --rm pipeline test
 docker compose run --rm pipeline demo --fresh --yes
 docker compose run --rm pipeline evidence
 docker compose run --rm pipeline search "lectura compartida para estimular el lenguaje" --top-k 5
@@ -166,6 +167,8 @@ Documentación detallada:
 - [Fuentes y licencias](docs/source-licenses.md)
 - [Contrato de datos](docs/data-contract.md)
 - [Arquitectura](docs/architecture.md)
+- [AuditorÃ­a independiente final](docs/final-audit.md)
+- [Informe PDF de auditorÃ­a](output/pdf/bbfs-final-audit.pdf)
 
 El código del repositorio se distribuye bajo licencia [MIT](LICENSE). Los
 metadatos y resúmenes recuperados conservan los derechos y condiciones de sus

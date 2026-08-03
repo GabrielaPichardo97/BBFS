@@ -69,6 +69,9 @@ jobs:
       - name: Run doctor in the container
         run: docker compose run --rm --no-deps pipeline doctor
 
+      - name: Run offline production self-tests in the container
+        run: docker compose run --rm --no-deps pipeline test
+
       - name: Run integration tests with networking disabled
         run: |
           docker run --rm \

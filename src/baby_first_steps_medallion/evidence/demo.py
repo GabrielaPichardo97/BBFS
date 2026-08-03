@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import csv
+import hashlib
 import importlib.util
 import json
 import os
@@ -225,6 +226,10 @@ class DemoService:
             raise DemoError("Los dos batch_id Bronze deben ser diferentes.")
         bronze_rows = bronze_evidence_rows((first_manifest, second_manifest))
         _require_bronze_coverage(bronze_rows)
+        payload_integrity = payload_integrity_rows(
+            self._settings, (first_manifest, second_manifest)
+        )
+        _require_payload_integrity(payload_integrity)
         log_events.append(f"bronze_batch_1: {first_batch_id}")
         log_events.append(f"bronze_batch_2: {second_batch_id}")
 
@@ -246,6 +251,9 @@ class DemoService:
         )
 
         contract_rows = contract_evidence_rows(validation_1)
+        _require_contract_coverage(contract_rows)
+        language_rows = language_evidence_rows(self._settings)
+        _require_bilingual_corpus(language_rows)
         idempotency_rows = idempotency_evidence_rows(
             persistence_1, persistence_2, gold_1, gold_2
         )
@@ -259,7 +267,9 @@ class DemoService:
             manifests=(first_manifest, second_manifest),
             evidence_without_safety={
                 "bronze": bronze_rows,
+                "payload_integrity": payload_integrity,
                 "contract": contract_rows,
+                "languages": language_rows,
                 "idempotency": idempotency_rows,
                 "duplicates": duplicates,
                 "semantic_search": search_rows,
@@ -281,7 +291,9 @@ class DemoService:
             "second_bronze_batch_id": second_batch_id,
             "environment": environment,
             "bronze": bronze_rows,
+            "payload_integrity": payload_integrity,
             "contract": contract_rows,
+            "languages": language_rows,
             "runs": {
                 "run_1": _run_document(first_batch_id, persistence_1, gold_1),
                 "run_2": _run_document(first_batch_id, persistence_2, gold_2),
@@ -293,6 +305,9 @@ class DemoService:
             "criteria": criteria_rows(
                 environment,
                 bronze_rows,
+                payload_integrity,
+                contract_rows,
+                language_rows,
                 idempotency_rows,
                 duplicates,
                 search_rows,
@@ -429,6 +444,43 @@ def bronze_evidence_rows(manifests: Sequence[Mapping[str, Any]]) -> list[dict[st
     return rows
 
 
+def payload_integrity_rows(
+    settings: Settings, manifests: Sequence[Mapping[str, Any]]
+) -> list[dict[str, Any]]:
+    """Re-read every persisted Bronze response and verify its original byte hash."""
+    rows: list[dict[str, Any]] = []
+    for manifest in manifests:
+        batch_id = _required_text(manifest, "batch_id")
+        responses = manifest.get("responses")
+        if not isinstance(responses, list):
+            raise DemoError(f"Manifest Bronze invÃ¡lido: {batch_id}")
+        for response in responses:
+            if not isinstance(response, Mapping):
+                raise DemoError(f"Respuesta Bronze invÃ¡lida: {batch_id}")
+            relative_path = _required_text(response, "file")
+            payload_path = settings.data_dir / "bronze" / batch_id / relative_path
+            try:
+                payload = payload_path.read_bytes()
+            except OSError as error:
+                raise DemoError(f"No se pudo releer Bronze: {payload_path}") from error
+            expected_hash = _required_text(response, "sha256")
+            expected_bytes = int(response.get("byte_count", -1))
+            actual_hash = hashlib.sha256(payload).hexdigest()
+            passed = actual_hash == expected_hash and len(payload) == expected_bytes
+            rows.append(
+                {
+                    "batch_id": batch_id,
+                    "source": str(response.get("source_name", "")),
+                    "file": relative_path,
+                    "expected_bytes": expected_bytes,
+                    "actual_bytes": len(payload),
+                    "sha256_matches": actual_hash == expected_hash,
+                    "status": _status(passed),
+                }
+            )
+    return rows
+
+
 def contract_evidence_rows(validation: SilverValidationResult) -> list[dict[str, Any]]:
     """Expose Silver extraction and real validation reasons by source."""
     rows: list[dict[str, Any]] = []
@@ -449,6 +501,30 @@ def contract_evidence_rows(validation: SilverValidationResult) -> list[dict[str,
             }
         )
     return rows
+
+
+def language_evidence_rows(settings: Settings) -> list[dict[str, Any]]:
+    """Calculate observed bilingual Silver coverage from persisted real records."""
+    connection = duckdb.connect(str(settings.data_dir / "baby_first_steps.duckdb"), read_only=True)
+    try:
+        observed = connection.execute(
+            "SELECT LOWER(language), COUNT(*) FROM silver_resources GROUP BY LOWER(language)"
+        ).fetchall()
+    finally:
+        connection.close()
+    groups = {"spanish": 0, "english": 0, "other_or_unknown": 0}
+    for language, count in observed:
+        normalized = str(language).strip().lower()
+        if normalized in {"es", "spa", "spanish", "espaÃ±ol"}:
+            groups["spanish"] += int(count)
+        elif normalized in {"en", "eng", "english"}:
+            groups["english"] += int(count)
+        else:
+            groups["other_or_unknown"] += int(count)
+    return [
+        {"language_group": name, "rows": count}
+        for name, count in groups.items()
+    ]
 
 
 def idempotency_evidence_rows(
@@ -613,6 +689,9 @@ def _query_count(connection: duckdb.DuckDBPyConnection, sql: str) -> int:
 def criteria_rows(
     environment: Sequence[Mapping[str, str]],
     bronze: Sequence[Mapping[str, Any]],
+    payload_integrity: Sequence[Mapping[str, Any]],
+    contract: Sequence[Mapping[str, Any]],
+    languages: Sequence[Mapping[str, Any]],
     idempotency: Sequence[Mapping[str, Any]],
     duplicates: Sequence[Mapping[str, Any]],
     searches: Sequence[Mapping[str, Any]],
@@ -625,6 +704,9 @@ def criteria_rows(
     searches_passed = len(searches) == len(ACCEPTANCE_QUERIES) and all(
         item["status"] == "PASS" for item in searches
     )
+    language_counts = {
+        str(item.get("language_group")): int(item.get("rows", 0)) for item in languages
+    }
     return [
         {
             "criterion": "environment",
@@ -635,6 +717,37 @@ def criteria_rows(
             "status": _status(
                 len({str(item["batch_id"]) for item in bronze}) == 2
                 and all(item["status"] == "PASS" for item in bronze)
+            ),
+        },
+        {
+            "criterion": "payload_integrity",
+            "status": _status(
+                bool(payload_integrity)
+                and all(item.get("status") == "PASS" for item in payload_integrity)
+            ),
+        },
+        {
+            "criterion": "three_sources_with_records",
+            "status": _status(
+                {str(item.get("source")) for item in contract} == set(DEMO_SOURCES)
+                and all(int(item.get("rows_extracted", 0)) > 0 for item in contract)
+            ),
+        },
+        {
+            "criterion": "real_quarantine_with_reason",
+            "status": _status(
+                any(
+                    int(item.get("rows_invalid", 0)) > 0
+                    and bool(item.get("principales_motivos_reales"))
+                    for item in contract
+                )
+            ),
+        },
+        {
+            "criterion": "bilingual_corpus",
+            "status": _status(
+                language_counts.get("spanish", 0) > 0
+                and language_counts.get("english", 0) > 0
             ),
         },
         {
@@ -663,6 +776,30 @@ def _require_bronze_coverage(rows: Sequence[Mapping[str, Any]]) -> None:
             "La demostración requiere respuestas reales exitosas de las tres fuentes "
             "en dos batches."
         )
+
+
+def _require_payload_integrity(rows: Sequence[Mapping[str, Any]]) -> None:
+    if not rows or any(row.get("status") != "PASS" for row in rows):
+        raise DemoError("Uno o mÃ¡s payloads Bronze no conservan bytes y SHA-256 originales.")
+
+
+def _require_contract_coverage(rows: Sequence[Mapping[str, Any]]) -> None:
+    sources = {str(row.get("source")) for row in rows}
+    if sources != set(DEMO_SOURCES) or any(
+        int(row.get("rows_extracted", 0)) <= 0 for row in rows
+    ):
+        raise DemoError("Las tres fuentes deben aportar registros extraÃ­dos reales.")
+    if not any(
+        int(row.get("rows_invalid", 0)) > 0 and row.get("principales_motivos_reales")
+        for row in rows
+    ):
+        raise DemoError("La demostraciÃ³n requiere cuarentena real con un motivo calculado.")
+
+
+def _require_bilingual_corpus(rows: Sequence[Mapping[str, Any]]) -> None:
+    counts = {str(row.get("language_group")): int(row.get("rows", 0)) for row in rows}
+    if counts.get("spanish", 0) <= 0 or counts.get("english", 0) <= 0:
+        raise DemoError("Silver debe contener registros reales tanto en espaÃ±ol como en inglÃ©s.")
 
 
 def _require_idempotency(rows: Sequence[Mapping[str, Any]]) -> None:
@@ -761,7 +898,15 @@ def _write_text_atomic(path: Path, content: str) -> None:
 
 def _csv_rows(document: Mapping[str, Any]) -> list[dict[str, str]]:
     rows: list[dict[str, str]] = []
-    for section in ("bronze", "contract", "idempotency", "duplicates", "synthetic_safety"):
+    for section in (
+        "bronze",
+        "payload_integrity",
+        "contract",
+        "languages",
+        "idempotency",
+        "duplicates",
+        "synthetic_safety",
+    ):
         value = document.get(section, [] if section != "synthetic_safety" else {})
         if isinstance(value, Mapping):
             for key, item in value.items():
@@ -821,6 +966,22 @@ def _render_markdown(document: Mapping[str, Any]) -> str:
                 status=item["status"],
             )
         )
+    integrity = document.get("payload_integrity", [])
+    if isinstance(integrity, list):
+        passed = sum(
+            1 for item in integrity if isinstance(item, Mapping) and item.get("status") == "PASS"
+        )
+        lines.extend(
+            [
+                "",
+                "## Integridad de payloads",
+                "",
+                (
+                    "Payloads re-leÃ­dos con bytes y SHA-256 coincidentes: "
+                    f"`{passed}/{len(integrity)}`."
+                ),
+            ]
+        )
     lines.extend(
         [
             "",
@@ -841,6 +1002,20 @@ def _render_markdown(document: Mapping[str, Any]) -> str:
                 reasons=_json_cell(item["principales_motivos_reales"]),
             )
         )
+    languages = document.get("languages", [])
+    if isinstance(languages, list):
+        lines.extend(
+            [
+                "",
+                "## Cobertura de idiomas observada",
+                "",
+                "| Grupo | Registros Silver |",
+                "| --- | ---: |",
+            ]
+        )
+        for item in languages:
+            if isinstance(item, Mapping):
+                lines.append(f"| {item.get('language_group', '')} | {item.get('rows', 0)} |")
     lines.extend(
         [
             "",

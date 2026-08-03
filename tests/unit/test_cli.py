@@ -29,6 +29,21 @@ def test_doctor_succeeds_without_optional_libraries(
     assert "[OK] faiss" in result.output
 
 
+def test_container_self_test_exercises_offline_production_code(
+    runner: CliRunner, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.setenv("BFSM_DATA_DIR", str(tmp_path / "data"))
+    monkeypatch.setenv("BFSM_ARTIFACTS_DIR", str(tmp_path / "artifacts"))
+    monkeypatch.setenv("HF_HOME", str(tmp_path / "hf"))
+
+    result = runner.invoke(app, ["test"])
+
+    assert result.exit_code == 0, result.output
+    assert "[PASS] immutable_byte_storage" in result.output
+    assert "[PASS] silver_schema_and_guards" in result.output
+    assert "[PASS] required_secrets" in result.output
+
+
 def test_demo_requires_fresh_and_evidence_requires_a_prior_run(
     runner: CliRunner, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:

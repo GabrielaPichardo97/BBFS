@@ -61,6 +61,29 @@ No queda una fase posterior autorizada en este plan. La matriz reproducible de
 esta entrega está en `docs/rubric-traceability.md`; cualquier trabajo futuro
 requiere una nueva instrucción.
 
+## AuditorÃ­a independiente final (completada)
+
+Un clon nuevo de la rama predeterminada `main` revelÃ³ que el commit
+`3418c2d7262ebe32d19514578c6db51003c429b1` sÃ³lo contiene un README de seis
+bytes; los seis comandos Docker fallaron allÃ­. La implementaciÃ³n se auditÃ³ desde
+el commit `eebbbd56a074348ab1daa4467fb5c1291c7ed5a0` en la rama
+`codex/final-independent-audit`. Se corrigieron exclusivamente los bloqueos de
+ejecuciÃ³n: comando offline `pipeline test`, consultas que realmente aportan
+registros de las tres fuentes y criterios calculados para integridad de bytes,
+cuarentena real y corpus bilingÃ¼e.
+
+Se ejecutÃ³ dos veces desde cero `docker compose run --rm pipeline demo --fresh
+--yes` sobre el mismo clon. Ambas ejecuciones pasaron diez criterios calculados,
+procesaron dos veces el mismo batch seleccionado, dejaron la segunda corrida
+con cero inserciones/actualizaciones Silver y Gold, devolvieron cero duplicados,
+generaron seis bÃºsquedas espaÃ±olas con resultados y calcularon cero registros
+sintÃ©ticos en Bronze, Silver, Gold y evidencia. La ejecuciÃ³n final se conserva
+localmente; payloads, DuckDB, modelo e Ã­ndice permanecen ignorados. Resultados,
+limitaciones y estado `NOT VERIFIED` de GitHub Actions alojadas se documentan en
+`docs/final-audit.md` y `output/pdf/bbfs-final-audit.pdf`. El merge a `main`
+queda fuera de este paso y es el Ãºnico bloqueo para que un clon predeterminado
+sea reproducible.
+
 ## Decisiones que no bloquean este plan
 
 - Rango propuesto: 0–36 meses.

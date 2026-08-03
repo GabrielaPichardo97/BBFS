@@ -25,6 +25,7 @@ from baby_first_steps_medallion.evidence.demo import (
 from baby_first_steps_medallion.gold.service import GoldError, GoldRepository
 from baby_first_steps_medallion.logging import configure_logging
 from baby_first_steps_medallion.paths import build_runtime_paths, ensure_writable
+from baby_first_steps_medallion.selftest import run_self_test
 from baby_first_steps_medallion.silver.persistence import SilverPersistenceError, SilverRepository
 from baby_first_steps_medallion.silver.service import SilverValidationError, SilverValidator
 
@@ -95,6 +96,17 @@ def doctor() -> None:
     for check in checks:
         typer.echo(f"[{check.status}] {check.name}: {check.detail}")
     if any(check.status == "FAIL" for check in checks):
+        raise typer.Exit(code=1)
+
+
+@app.command("test")
+def container_test() -> None:
+    """Run bounded offline production self-tests inside the container."""
+    settings = Settings.from_env()
+    checks = run_self_test(settings)
+    for check in checks:
+        typer.echo(f"[{check.status}] {check.name}: {check.detail}")
+    if any(check.status != "PASS" for check in checks):
         raise typer.Exit(code=1)
 
 

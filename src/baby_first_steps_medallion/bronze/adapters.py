@@ -116,7 +116,10 @@ class EuropePmcAdapter(BaseAdapter):
     _endpoint = "https://www.ebi.ac.uk/europepmc/webservices/rest/search"
 
     def build_requests(self, profile: QueryProfile, max_records: int) -> Sequence[RequestSpec]:
-        source_query = " OR ".join(f'"{term}"' for term in profile.terms)
+        # Europe PMC ranks this concise English expansion reliably.  Joining every
+        # bilingual phrase with exact-match OR produced empty result sets in the
+        # independent audit, so use one documented acquisition expansion here.
+        source_query = profile.terms[2]
         return (
             RequestSpec(
                 source_name=self.source_name,
@@ -146,18 +149,43 @@ class OpenAlexAdapter(BaseAdapter):
     _endpoint = "https://api.openalex.org/works"
 
     def build_requests(self, profile: QueryProfile, max_records: int) -> Sequence[RequestSpec]:
-        source_query = " ".join(profile.terms)
-        return (
+        # OpenAlex treats unqualified search words as AND.  Separate bounded
+        # Spanish and English requests so the corpus is predictably bilingual
+        # without exceeding max_records for the source.
+        spanish_count = (max_records + 1) // 2
+        english_count = max_records - spanish_count
+        requests = [
             RequestSpec(
                 source_name=self.source_name,
                 profile_id=profile.profile_id,
-                request_kind="search",
+                request_kind="search_es",
                 endpoint=self._endpoint,
-                params={"search": source_query, "per-page": str(max_records)},
-                source_query=source_query,
+                params={
+                    "search": profile.terms[0],
+                    "filter": "language:es",
+                    "per-page": str(spanish_count),
+                },
+                source_query=profile.terms[0],
                 response_extension="json",
-            ),
-        )
+            )
+        ]
+        if english_count:
+            requests.append(
+                RequestSpec(
+                    source_name=self.source_name,
+                    profile_id=profile.profile_id,
+                    request_kind="search_en",
+                    endpoint=self._endpoint,
+                    params={
+                        "search": profile.terms[2],
+                        "filter": "language:en",
+                        "per-page": str(english_count),
+                    },
+                    source_query=profile.terms[2],
+                    response_extension="json",
+                )
+            )
+        return tuple(requests)
 
     def source_record_hint(self) -> str:
         return "OpenAlex work id"

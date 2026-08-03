@@ -6,8 +6,13 @@ from pathlib import Path
 
 import httpx
 
-from baby_first_steps_medallion.bronze.adapters import EuropePmcAdapter, PubMedAdapter
+from baby_first_steps_medallion.bronze.adapters import (
+    EuropePmcAdapter,
+    OpenAlexAdapter,
+    PubMedAdapter,
+)
 from baby_first_steps_medallion.bronze.http import ResilientHttpFetcher, SourceRateLimiter
+from baby_first_steps_medallion.bronze.profiles import QUERY_PROFILES
 from baby_first_steps_medallion.bronze.service import BronzeIngestor
 from baby_first_steps_medallion.config import Settings
 
@@ -26,9 +31,9 @@ def _settings(tmp_path: Path) -> Settings:
 
 
 def _adapter(
-    adapter_type: type[EuropePmcAdapter] | type[PubMedAdapter],
+    adapter_type: type[EuropePmcAdapter] | type[OpenAlexAdapter] | type[PubMedAdapter],
     handler: Callable[[httpx.Request], httpx.Response],
-) -> tuple[EuropePmcAdapter | PubMedAdapter, httpx.Client]:
+) -> tuple[EuropePmcAdapter | OpenAlexAdapter | PubMedAdapter, httpx.Client]:
     client = httpx.Client(transport=httpx.MockTransport(handler))
     fetcher = ResilientHttpFetcher(
         client=client,
@@ -37,6 +42,30 @@ def _adapter(
         jitter=lambda: 0.0,
     )
     return adapter_type(fetcher), client
+
+
+def test_acquisition_queries_are_bounded_and_openalex_is_bilingual() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:  # pragma: no cover - not fetched
+        return httpx.Response(200, request=request)
+
+    profile = QUERY_PROFILES["motor_sensory"]
+    europe, europe_client = _adapter(EuropePmcAdapter, handler)
+    openalex, openalex_client = _adapter(OpenAlexAdapter, handler)
+    try:
+        europe_requests = europe.build_requests(profile, 5)
+        openalex_requests = openalex.build_requests(profile, 5)
+    finally:
+        europe_client.close()
+        openalex_client.close()
+
+    assert len(europe_requests) == 1
+    assert europe_requests[0].source_query == profile.terms[2]
+    assert [request.request_kind for request in openalex_requests] == ["search_es", "search_en"]
+    assert [request.params["filter"] for request in openalex_requests] == [
+        "language:es",
+        "language:en",
+    ]
+    assert sum(int(request.params["per-page"]) for request in openalex_requests) == 5
 
 
 def test_resume_retries_failed_request_and_keeps_manifest_consistent(tmp_path: Path) -> None:
