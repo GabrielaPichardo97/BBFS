@@ -4,9 +4,10 @@ Implementación local y reproducible de una arquitectura medallón documental so
 desarrollo temprano (0–36 meses). La recuperación final será exclusivamente en
 español; el corpus puede incluir documentos en español e inglés.
 
-Bronze descarga respuestas reales sin transformarlas y Silver las valida y
-persiste de forma idempotente en DuckDB. Gold, búsqueda, evidencia y demo aún
-no se implementan y no simulan éxito.
+Bronze descarga respuestas reales sin transformarlas. Silver las valida y
+persiste de forma idempotente en DuckDB. Gold crea embeddings CPU y un índice
+FAISS local a partir de recursos Silver reales; la búsqueda recibe consultas
+exclusivamente en español.
 
 ## Inicio local
 
@@ -40,9 +41,6 @@ Puede reanudarse una ejecución incompleta sin sustituir un payload existente:
 baby-first-steps ingest --resume <batch_id>
 ```
 
-Los comandos `gold`, `search`, `evidence` y `demo` siguen sin implementarse y
-salen con código 2.
-
 ## Validación Silver temporal
 
 La validación Silver lee exclusivamente un batch Bronze local, verifica los
@@ -74,6 +72,33 @@ baby-first-steps show-runs
 `audit-duplicates` falla si existen claves canónicas, cuarentenas o filas
 `source_type='synthetic'` duplicadas/no permitidas. DuckDB se ignora en Git.
 
+## Gold y búsqueda semántica
+
+Gold sólo lee `silver_resources` con `source_type='real'`. Usa
+`intfloat/multilingual-e5-small` exclusivamente en CPU, conserva vectores
+`float32` normalizados L2 y registra el nombre y la revisión efectiva del
+modelo. El primer comando puede descargar el modelo público a la caché de
+Hugging Face, que está fuera de Git.
+
+```powershell
+baby-first-steps gold
+baby-first-steps search "actividades sensoriales con diferentes texturas para un bebé" --top-k 5
+```
+
+El texto de documento se forma sin traducción ni enriquecimiento como
+`passage: <title>. <abstract>. Keywords: <keywords>. Subjects: <subject_terms>.`;
+la consulta se codifica como `query: <consulta en español>`. El índice se escribe
+de forma atómica en `data/gold/resources.faiss` y su estado, hash, IDs estables
+y vectores se registran en DuckDB. Si el contenido y el modelo no cambian,
+`gold` no vuelve a codificar ni reescribir el índice.
+
+`gold` también genera
+`artifacts/gold/acceptance-search.json` con seis consultas españolas, hasta cinco
+resultados, score, título, idioma, fuentes, fragmento y una revisión manual de
+coherencia pendiente. No contiene una métrica de relevancia inventada. El JSON
+de `search` devuelve `rank`, identificador canónico, título, score, fragmento,
+idioma, fecha, URL y fuentes observadas.
+
 ## Docker
 
 Cuando Docker Compose esté disponible:
@@ -86,6 +111,12 @@ docker compose run --rm pipeline doctor
 
 El único servicio es `pipeline`, se ejecuta sin privilegios de root y persiste
 `./data` en `/app/data`. La caché de Hugging Face usa un volumen independiente.
+Para ejecutar Gold dentro del contenedor:
+
+```powershell
+docker compose run --rm pipeline gold
+docker compose run --rm pipeline search "lectura compartida durante los primeros años de vida" --top-k 5
+```
 
 ## Datos y seguridad
 
@@ -95,6 +126,8 @@ El único servicio es `pipeline`, se ejecuta sin privilegios de root y persiste
 - Datos reales, DuckDB, modelos, embeddings e índices se excluyen de Git.
 - Los datos sintéticos sólo son válidos en `tests/fixtures/synthetic/` y las
   salvaguardas rechazan `source_type='synthetic'` en contextos productivos.
+- Los resultados son recuperación documental: no son diagnóstico, tratamiento,
+  prescripción médica ni recomendación de seguridad personalizada.
 
 Consulte [docs/PRD.md](docs/PRD.md), [docs/architecture.md](docs/architecture.md)
 y [docs/data-contract.md](docs/data-contract.md) para las decisiones completas.

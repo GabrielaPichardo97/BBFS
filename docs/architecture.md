@@ -7,7 +7,7 @@
 - La unidad de trazabilidad es la respuesta de una fuente y la unidad de búsqueda es el documento canónico.
 - La demostración pública usa sólo consultas españolas; la adquisición puede usar español e inglés.
 
-## Flujo futuro
+## Flujo local
 
 ```text
 PubMed ─────┐
@@ -41,12 +41,26 @@ SciELO no está en el flujo crítico. Sólo puede añadirse como cuarto adaptado
 
 ## Gold
 
-- Entrada exclusiva: documentos Silver válidos con `source_type != 'synthetic'`.
-- Documento de recuperación: título + abstract/resumen, y keywords/términos temáticos como contexto separado.
-- Índice: FAISS incremental, con manifiesto de versión/hash de los documentos Silver incluidos; índice y vectores se ignoran en Git.
-- Consulta: texto español con modelo multilingüe de recuperación asimétrica. La primera opción de evaluación es `intfloat/multilingual-e5-base` con prefijos `query:` y `passage:`; no se descarga ni evalúa en esta fase.
+- Entrada exclusiva: documentos Silver válidos con `source_type='real'`. La
+  implementación falla antes de codificar si Silver o Gold contiene otro tipo.
+- Documento de recuperación: `passage: <title>. <abstract>. Keywords:
+  <keywords>. Subjects: <subject_terms>.`, sin traducción ni enriquecimiento.
+- Modelo: `intfloat/multilingual-e5-small`, sólo CPU. Los documentos usan el
+  prefijo `passage:` y las consultas en español usan `query:`. Se almacenan la
+  revisión efectiva, dimensión y `content_hash` junto con el vector `float32`
+  normalizado L2.
+- Índice: `IndexFlatIP` dentro de `IndexIDMap2`, con ID entero estable derivado
+  del identificador canónico. El archivo atómico
+  `data/gold/resources.faiss` y los vectores/estado DuckDB se ignoran en Git.
+  El estado registra el SHA-256 del archivo y permite detectar desalineación.
+- Incrementalidad: entradas sin cambio de contenido y modelo son no-op; los
+  documentos cambiados sustituyen su vector conservando el ID; un índice ausente
+  puede reconstruirse desde los blobs Gold sin recodificar entradas sin cambio.
+- Consulta: `semantic_search(query, top_k)` valida checksum y compatibilidad de
+  modelo antes de devolver rank, score, fragmento, idioma, fecha, URL y fuentes
+  observadas. No aplica un umbral artificial de relevancia.
 
-## Operación futura
+## Operación posterior (fuera del paso actual)
 
 1. Comando de adquisición limitado y reproducible.
 2. Comando de transformación Silver que incluye la prueba de exclusión sintética.

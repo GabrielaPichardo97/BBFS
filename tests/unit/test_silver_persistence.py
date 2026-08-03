@@ -178,7 +178,7 @@ def test_first_load_and_three_exact_reprocesses_are_idempotent(tmp_path: Path) -
     ]
     assert _rows(settings, "SELECT COUNT(*) FROM silver_resources") == [(1,)]
     assert _rows(settings, "SELECT COUNT(*) FROM silver_resource_sources") == [(1,)]
-    assert _rows(settings, "SELECT COUNT(*) FROM meta_schema_version") == [(1,)]
+    assert _rows(settings, "SELECT COUNT(*) FROM meta_schema_version") == [(2,)]
     assert _rows(settings, "SELECT status, COUNT(*) FROM pipeline_runs GROUP BY status") == [
         ("completed", 4)
     ]

@@ -12,9 +12,13 @@ license = { text = "MIT" }
 authors = [{ name = "BBFS contributors" }]
 dependencies = [
   "duckdb==1.2.2",
+  "faiss-cpu==1.10.0",
   "httpx==0.28.1",
+  "numpy==2.4.6",
   "pydantic==2.10.6",
   "pytz==2025.2",
+  "sentence-transformers==3.4.1",
+  "torch==2.6.0+cpu",
   "typer==0.15.1",
 ]
 

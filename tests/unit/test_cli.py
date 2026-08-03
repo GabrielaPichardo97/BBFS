@@ -26,10 +26,10 @@ def test_doctor_succeeds_without_optional_libraries(
     assert "[OK] python" in result.output
     assert "[OK] secretos_obligatorios: ninguno requerido" in result.output
     assert "[OK] duckdb" in result.output
-    assert "[SKIP] faiss" in result.output
+    assert "[OK] faiss" in result.output
 
 
-@pytest.mark.parametrize("command", ["gold", "search", "evidence", "demo"])
+@pytest.mark.parametrize("command", ["evidence", "demo"])
 def test_placeholder_commands_fail_without_simulating_success(
     runner: CliRunner, command: str
 ) -> None:
@@ -83,3 +83,18 @@ def test_silver_rejects_a_missing_bronze_batch_without_network(
 
     assert result.exit_code == 1
     assert "No se encontr" in result.output
+
+
+def test_gold_and_search_fail_clearly_without_a_ready_local_index(
+    runner: CliRunner, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.setenv("BFSM_DATA_DIR", str(tmp_path / "data"))
+    monkeypatch.setenv("BFSM_ARTIFACTS_DIR", str(tmp_path / "artifacts"))
+
+    gold = runner.invoke(app, ["gold"])
+    search = runner.invoke(app, ["search", "lectura compartida para bebés"])
+
+    assert gold.exit_code == 1
+    assert "No hay recursos Silver" in gold.output
+    assert search.exit_code == 1
+    assert "No existe un índice Gold" in search.output

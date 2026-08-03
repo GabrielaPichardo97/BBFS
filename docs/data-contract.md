@@ -78,9 +78,39 @@ versionada `sql/001_silver_schema.sql` crea `meta_schema_version`,
   cuarentenas, y además exige cero filas con `source_type='synthetic'` en las
   cuatro tablas de datos Silver.
 
-## GoldSearchDocument
+## Gold: embeddings e índice semántico
 
-Gold recibe sólo documentos Silver canónicos válidos. Contiene `canonical_key`, `language`, `embedding_text`, hash de texto, versión de modelo y procedencia. `embedding_text` se construye como `title + abstract` y añade keywords/MeSH en una sección identificada si existen. Gold debe rechazar explícitamente `source_type='synthetic'`, referencias Bronze directas y registros sin procedencia Silver.
+Gold recibe exclusivamente documentos canónicos de `silver_resources` con
+`source_type='real'`; nunca lee payloads Bronze. Para cada documento conserva el
+texto de recuperación, sin traducir ni enriquecer, con esta forma exacta:
+
+```text
+passage: <title>. <abstract>. Keywords: <keywords>. Subjects: <subject_terms>.
+```
+
+Las consultas finales se forman como `query: <consulta en español>`. El modelo
+es `intfloat/multilingual-e5-small`, ejecutado sólo con CPU. Sus vectores son
+`float32`, se normalizan L2 y la dimensión se toma de la salida del modelo.
+
+La migración `sql/002_gold_schema.sql` crea:
+
+| Tabla | Campos y regla |
+| --- | --- |
+| `gold_embeddings` | `canonical_id` PK, `vector_id` entero estable y único, `model_name`, `model_revision`, `embedding_dimension`, `content_hash`, `vector_blob`, `embedded_at` y `source_type='real'`. `vector_blob` permite reconstruir el índice si el archivo local falta o se corrompe sin recodificar contenido sin cambios. |
+| `gold_index_state` | `index_path` PK, `vector_count`, `model_name`, `model_revision`, `updated_at`, `index_sha256`. El hash corresponde al archivo FAISS persistido. |
+
+`vector_id` se deriva de forma determinista del identificador canónico y se
+conserva ante una actualización de contenido. Un `content_hash`, nombre y
+revisión de modelo iguales son un no-op: no se genera embedding ni se reescribe
+`data/gold/resources.faiss`. Ante un cambio de contenido se elimina el vector
+anterior de `IndexIDMap2` y se añade el nuevo con el mismo ID. El índice usa
+`IndexFlatIP` sobre vectores normalizados L2 y se escribe mediante un archivo
+temporal hermano y reemplazo atómico.
+
+`semantic_search(query, top_k)` devuelve solamente `rank`, `canonical_id`,
+`title`, `score`, `abstract_snippet`, `language`, `publication_date`,
+`resource_url` y `observed_sources`. Antes de buscar verifica el hash del índice,
+el modelo/revisión y la ausencia de filas no reales en Silver y Gold.
 
 ## Salvaguarda obligatoria contra sintéticos
 
@@ -89,6 +119,6 @@ Antes de cerrar el paso Silver, una prueba automatizada debe:
 1. Cargar un fixture artificial exclusivamente desde `tests/fixtures/synthetic/`.
 2. Verificar que el intento de persistirlo en una ejecución productiva falla con un error inequívoco.
 3. Consultar las tablas/evidencia productivas y exigir cero filas con `source_type='synthetic'`.
-4. Verificar que Gold/FAISS no recibe ese fixture.
+4. Verificar que Gold/FAISS no recibe ese fixture y que la evidencia Gold no lo expone.
 
 La matriz de aceptación no podrá marcar estos criterios como PASS sin ejecutar dicha prueba.

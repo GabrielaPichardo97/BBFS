@@ -165,6 +165,14 @@ class SilverRepository:
         finally:
             connection.close()
 
+    def migrate(self) -> None:
+        """Apply all versioned local schema migrations without loading a Bronze batch."""
+        connection = self._connect()
+        try:
+            self._apply_migrations(connection)
+        finally:
+            connection.close()
+
     def show_runs(self, *, limit: int = 20) -> list[dict[str, Any]]:
         """Return recent persisted pipeline runs without exposing source payloads."""
         connection = self._connect()
@@ -843,6 +851,7 @@ class SilverRepository:
             "silver_resources",
             "silver_resource_sources",
             "silver_rejects",
+            "gold_embeddings",
         ):
             row = connection.execute(
                 f"SELECT COUNT(*) FROM {table_name} WHERE source_type = 'synthetic'"

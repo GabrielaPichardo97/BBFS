@@ -16,6 +16,7 @@ from baby_first_steps_medallion.bronze.service import (
     build_default_adapters,
 )
 from baby_first_steps_medallion.config import Settings
+from baby_first_steps_medallion.gold.service import GoldError, GoldRepository
 from baby_first_steps_medallion.logging import configure_logging
 from baby_first_steps_medallion.paths import build_runtime_paths, ensure_writable
 from baby_first_steps_medallion.silver.persistence import SilverPersistenceError, SilverRepository
@@ -196,14 +197,43 @@ def show_runs(limit: int = typer.Option(20, min=1, max=100)) -> None:
 
 @app.command()
 def gold() -> None:
-    """Reserved for the future Gold step."""
-    _unavailable("gold")
+    """Build the incremental CPU FAISS index from real Silver resources."""
+    repository = GoldRepository(Settings.from_env())
+    try:
+        build = repository.build()
+        artifact_path = repository.write_acceptance_evidence()
+    except GoldError as error:
+        typer.echo(f"gold: {error}", err=True)
+        raise typer.Exit(code=1) from error
+    typer.echo(
+        json.dumps(
+            {"build": build.as_dict(), "acceptance_artifact_path": str(artifact_path)},
+            ensure_ascii=False,
+            indent=2,
+            sort_keys=True,
+        )
+    )
 
 
 @app.command()
-def search() -> None:
-    """Reserved for the future Spanish semantic-search step."""
-    _unavailable("search")
+def search(
+    query: str = typer.Argument(..., help="Consulta de búsqueda semántica en español."),
+    top_k: int = typer.Option(5, min=1, max=100, help="Máximo de resultados a devolver."),
+) -> None:
+    """Search the local multilingual Gold index with a Spanish user query."""
+    try:
+        results = GoldRepository(Settings.from_env()).semantic_search(query, top_k)
+    except GoldError as error:
+        typer.echo(f"search: {error}", err=True)
+        raise typer.Exit(code=1) from error
+    typer.echo(
+        json.dumps(
+            [result.as_dict() for result in results],
+            ensure_ascii=False,
+            indent=2,
+            sort_keys=True,
+        )
+    )
 
 
 @app.command()
