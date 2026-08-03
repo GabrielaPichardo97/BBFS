@@ -1,5 +1,6 @@
 services:
   pipeline:
+    image: bbfs-pipeline:local
     build:
       context: .
     environment:

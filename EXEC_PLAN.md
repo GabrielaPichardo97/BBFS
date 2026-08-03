@@ -10,9 +10,9 @@
 | 3. Bronze | Adaptadores PubMed, Europe PMC y OpenAlex; bytes crudos, manifiestos e idempotencia de descarga | Completado |
 | 4. Silver | Pydantic v2, cuarentena, canonicalización, staging y UPSERT DuckDB | Completado |
 | 5. Gold | Embeddings multilingües CPU, FAISS incremental, búsqueda española y evidencia por consulta | Completado |
-| 6. Operación | Demostración reproducible y evidencia generada por código completadas; GitHub Actions queda pendiente | Completado parcialmente |
+| 6. Operación | Demostración, evidencia, documentación pública y workflows CI/live reproducibles | Completado |
 
-## Paso activo: Operación — demostración y evidencia (completado; no avanzar a CI sin una nueva instrucción)
+## Paso activo: Operación — publicación reproducible (completado)
 
 Silver lee exclusivamente bytes existentes en `data/bronze/<batch_id>/`, verifica su SHA-256 y extrae registros mediante parsers de PubMed, Europe PMC y OpenAlex. `ResourceRecord` usa Pydantic v2 estricto; normaliza solamente Unicode, espacios e identificadores permitidos. La carga `silver --batch-id` ejecuta migraciones SQL, vacía staging, deduplica por DOI o PMID, selecciona un principal determinista, conserva procedencias, hace UPSERT transaccional, persiste cuarentenas idempotentes, registra runs/métricas y ejecuta la auditoría de duplicados. No realiza llamadas HTTP ni modifica payloads Bronze.
 
@@ -38,9 +38,28 @@ regeneró las tres vistas derivadas sin llamadas a APIs. El `ENTRYPOINT` de la
 imagen invoca la CLI, por lo que el argumento `doctor` del comando Compose se
 interpreta correctamente.
 
-## Secuencia crítica posterior
+La preparación pública añade dos workflows con permisos de sólo lectura. `CI`
+se ejecuta en pull requests y pushes a `main`: instala desde el lock, ejecuta
+Ruff, mypy, pruebas unitarias con cobertura, valida y construye Docker, ejecuta
+`doctor`, prueba la integración con `--network none` y escanea rutas
+productivas. `E2E live` queda separado, sólo manual o semanal, con timeout,
+concurrency, caché de Hugging Face y retención de evidencia durante 14 días;
+no publica payloads Bronze completos.
 
-1. Añadir GitHub Actions sólo tras una nueva instrucción; no forma parte de este paso.
+Las verificaciones de esta entrega pasaron localmente: Ruff, mypy sobre 25
+archivos, 74 pruebas unitarias con 83% de cobertura, YAML de ambos workflows,
+escaneo publicable de 98 archivos, `docker compose config`, build de la imagen
+CPU, `doctor`, una integración medallón sin red y escaneo Docker de 105 archivos
+con `data/` y `artifacts/` vacíos. La API pública anónima de GitHub confirmó
+`GabrielaPichardo97/BBFS`, `private=false` y rama predeterminada `main`. Las
+ejecuciones alojadas de ambos workflows permanecen `NOT VERIFIED` hasta que
+GitHub las ejecute; este estado no se declara `PASS` por inspección.
+
+## Cierre del paso
+
+No queda una fase posterior autorizada en este plan. La matriz reproducible de
+esta entrega está en `docs/rubric-traceability.md`; cualquier trabajo futuro
+requiere una nueva instrucción.
 
 ## Decisiones que no bloquean este plan
 

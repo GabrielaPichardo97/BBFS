@@ -1,172 +1,172 @@
 # baby-first-steps-medallion
 
-Implementación local y reproducible de una arquitectura medallón documental sobre
-desarrollo temprano (0–36 meses). La recuperación final será exclusivamente en
-español; el corpus puede incluir documentos en español e inglés.
+[![CI](https://github.com/GabrielaPichardo97/BBFS/actions/workflows/ci.yml/badge.svg)](https://github.com/GabrielaPichardo97/BBFS/actions/workflows/ci.yml)
+[![E2E live](https://github.com/GabrielaPichardo97/BBFS/actions/workflows/e2e-live.yml/badge.svg)](https://github.com/GabrielaPichardo97/BBFS/actions/workflows/e2e-live.yml)
+[![Python 3.11](https://img.shields.io/badge/Python-3.11-3776AB.svg)](https://www.python.org/downloads/release/python-3110/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-Bronze descarga respuestas reales sin transformarlas. Silver las valida y
-persiste de forma idempotente en DuckDB. Gold crea embeddings CPU y un índice
-FAISS local a partir de recursos Silver reales; la búsqueda recibe consultas
-exclusivamente en español.
+Arquitectura medallón local, gratuita y dockerizada para recuperar, validar e
+indexar metadatos y resúmenes públicos sobre juego y desarrollo infantil
+temprano. El rango predeterminado es **0 a 36 meses**. El corpus puede contener
+documentos en español o inglés, pero la búsqueda semántica, sus ejemplos y la
+demostración funcional aceptan consultas **únicamente en español**.
 
-## Inicio local
+El producto ofrece recuperación documental. No proporciona diagnóstico,
+tratamiento, prescripción, consejo médico personalizado ni una certificación de
+seguridad de juguetes o actividades.
 
-Se requiere Python 3.11.
+## Fuentes y alcance
+
+| Fuente | Uso inicial | Formato Bronze | Identificadores |
+| --- | --- | --- | --- |
+| PubMed E-utilities | Evidencia biomédica | JSON de búsqueda y XML de registros | PMID, DOI |
+| Europe PMC REST | Metadatos y resúmenes biomédicos complementarios | JSON | PMID/PMCID, DOI, ID nativo |
+| OpenAlex REST | Cobertura académica multilingüe | JSON | OpenAlex ID, DOI |
+
+La ingesta usa consultas internas españolas e inglesas para mejorar el recall.
+No descarga PDFs, imágenes ni texto completo, y no usa scraping, API keys o
+servicios pagados. SciELO permanece fuera del camino crítico hasta disponer de
+un endpoint público estable y documentado.
+
+## Arquitectura
+
+```mermaid
+flowchart LR
+    A["PubMed · Europe PMC · OpenAlex"] -->|"HTTP anónimo y limitado"| B["Bronze<br/>bytes originales + manifest + SHA-256"]
+    B -->|"parseo y validación"| S["Silver<br/>Pydantic v2 + cuarentena + procedencia"]
+    S -->|"staging + UPSERT"| D["DuckDB local"]
+    D -->|"sólo registros válidos y reales"| G["Gold<br/>multilingual-e5-small + FAISS"]
+    G --> Q["Búsqueda semántica<br/>consultas en español"]
+    B --> E["Evidencia agregada"]
+    S --> E
+    G --> E
+```
+
+- **Bronze** conserva cada `response.content` byte a byte. El manifest separado
+  registra fuente, consulta, URL, fecha, estado, tamaño y SHA-256.
+- **Silver** verifica hashes, extrae por fuente, valida con Pydantic v2,
+  normaliza DOI/PMID, deduplica con reglas deterministas y conserva cuarentena y
+  procedencia. DuckDB recibe staging y UPSERT transaccional.
+- **Gold** codifica únicamente documentos Silver válidos con
+  `intfloat/multilingual-e5-small` en CPU. FAISS es incremental y local.
+
+## Quickstart local
+
+Requiere Python 3.11. Las versiones directas y transitivas están fijadas en
+`requirements.lock`.
 
 ```powershell
 py -3.11 -m venv .venv
 .\.venv\Scripts\Activate.ps1
-python -m pip install --upgrade pip
-python -m pip install -r requirements.lock
-python -m pip install --no-deps -e .
-python -m baby_first_steps_medallion.cli doctor
-pytest
+python -m pip install --requirement requirements.lock
+python -m pip install --no-deps --no-build-isolation --editable .
+baby-first-steps doctor
 ```
 
-## Ingesta Bronze
-
-El alias instalable es `baby-first-steps`. El siguiente comando conserva los
-bytes originales de las respuestas de PubMed, Europe PMC y OpenAlex en un batch
-ignorado por Git; no parsea documentos, no crea DuckDB y no descarga PDFs.
+Una ingesta real pequeña:
 
 ```powershell
-baby-first-steps ingest --sources pubmed,europe_pmc,openalex --profiles motor_sensory --max-records-per-source 20
-```
-
-Cada batch incluye `manifest.json`, `checksums.sha256`, `failures.jsonl` y, por
-fuente, pares de metadata de solicitud y payload original `.json` o `.xml`.
-Puede reanudarse una ejecución incompleta sin sustituir un payload existente:
-
-```powershell
-baby-first-steps ingest --resume <batch_id>
-```
-
-## Validación Silver temporal
-
-La validación Silver lee exclusivamente un batch Bronze local, verifica los
-SHA-256 y aplica el contrato Pydantic v2 en memoria. No descarga datos, no crea
-DuckDB, no escribe una tabla Silver ni realiza UPSERT. El umbral inicial de
-abstract es 80 caracteres.
-
-```powershell
-baby-first-steps silver-validate --batch-id <batch_id>
-```
-
-El comando informa conteos por fuente, registros válidos, cuarentenas reales,
-errores de parseo y proporción de abstracts ausentes. Los fixtures sintéticos
-no se aceptan en rutas Bronze productivas.
-
-## Carga Silver en DuckDB
-
-La carga Silver vuelve a validar el batch y persiste sólo registros reales en
-`data/baby_first_steps.duckdb`. Ejecuta migraciones SQL versionadas, vacía
-staging, deduplica por DOI o PMID, conserva procedencias y hace UPSERT
-idempotente. Un error revierte Silver y deja el run con estado fallido.
-
-```powershell
+baby-first-steps ingest --sources pubmed,europe_pmc,openalex --profiles motor_sensory --max-records-per-source 5
 baby-first-steps silver --batch-id <batch_id>
-baby-first-steps audit-duplicates
-baby-first-steps show-runs
-```
-
-`audit-duplicates` falla si existen claves canónicas, cuarentenas o filas
-`source_type='synthetic'` duplicadas/no permitidas. DuckDB se ignora en Git.
-
-## Gold y búsqueda semántica
-
-Gold sólo lee `silver_resources` con `source_type='real'`. Usa
-`intfloat/multilingual-e5-small` exclusivamente en CPU, conserva vectores
-`float32` normalizados L2 y registra el nombre y la revisión efectiva del
-modelo. El primer comando puede descargar el modelo público a la caché de
-Hugging Face, que está fuera de Git.
-
-```powershell
 baby-first-steps gold
 baby-first-steps search "actividades sensoriales con diferentes texturas para un bebé" --top-k 5
 ```
 
-El texto de documento se forma sin traducción ni enriquecimiento como
-`passage: <title>. <abstract>. Keywords: <keywords>. Subjects: <subject_terms>.`;
-la consulta se codifica como `query: <consulta en español>`. El índice se escribe
-de forma atómica en `data/gold/resources.faiss` y su estado, hash, IDs estables
-y vectores se registran en DuckDB. Si el contenido y el modelo no cambian,
-`gold` no vuelve a codificar ni reescribir el índice.
-
-`gold` también genera
-`artifacts/gold/acceptance-search.json` con seis consultas españolas, hasta cinco
-resultados, score, título, idioma, fuentes, fragmento y una revisión manual de
-coherencia pendiente. No contiene una métrica de relevancia inventada. El JSON
-de `search` devuelve `rank`, identificador canónico, título, score, fragmento,
-idioma, fecha, URL y fuentes observadas.
+La primera ejecución de Gold descarga el modelo público a una caché ignorada
+por Git. Los payloads reales, DuckDB, modelos e índices nunca se versionan.
 
 ## Docker
 
-Cuando Docker Compose esté disponible:
+El único servicio se llama `pipeline`, usa Python 3.11 y se ejecuta con el
+usuario no root `10001`. No incluye CUDA ni requiere GPU.
 
 ```powershell
 docker compose config
 docker compose build
 docker compose run --rm pipeline doctor
+docker compose run --rm pipeline demo --fresh --yes
+docker compose run --rm pipeline evidence
+docker compose run --rm pipeline search "lectura compartida para estimular el lenguaje" --top-k 5
 ```
 
-El único servicio es `pipeline`, se ejecuta sin privilegios de root y persiste
-`./data` en `/app/data`. La caché de Hugging Face usa un volumen independiente.
-Para ejecutar Gold dentro del contenedor:
+`./data` y `./artifacts` son persistentes; la caché de Hugging Face usa un
+volumen independiente.
 
-```powershell
-docker compose run --rm pipeline gold
-docker compose run --rm pipeline search "lectura compartida durante los primeros años de vida" --top-k 5
-```
+## Idempotencia, cuarentena y sintéticos
 
-## Demostración y evidencia reproducible
+Silver calcula `rows_inserted`, `rows_updated` y `rows_noop` antes del UPSERT.
+Reprocesar el mismo batch no crea entidades, procedencias ni cuarentenas
+duplicadas. Gold compara `content_hash`, modelo y revisión: un documento sin
+cambios no vuelve a generar su embedding ni reescribe el índice.
 
-El recorrido de aceptación no usa notebooks. El comando principal verifica el
-entorno, elimina únicamente salidas generadas conocidas, adquiere dos batches
-reales distintos de PubMed, Europe PMC y OpenAlex, procesa sólo el primero en
-Silver/Gold y lo reprocesa sin volver a consultar las APIs. Después ejecuta
-duplicados, seis consultas en español y las salvaguardas contra datos sintéticos.
+Los registros reales inválidos se conservan en `silver_rejects` con un
+`quarantine_id` determinista, locator Bronze, hash y todos los motivos de
+rechazo. Los datos sintéticos sólo existen bajo `tests/fixtures/synthetic/` y
+las pruebas verifican que `source_type='synthetic'` no alcance Bronze, Silver,
+Gold ni evidencia productiva.
+
+## Demostración y evidencia
 
 ```powershell
 baby-first-steps demo --fresh
-# Sin pregunta interactiva, por ejemplo para CI local:
+# Para automatización no interactiva:
 baby-first-steps demo --fresh --yes
-baby-first-steps evidence
 ```
 
-`--fresh` sólo elimina `data/bronze`, `data/gold`, la DuckDB local, cachés/modelos
-locales bajo `data/`, los artifacts de ejecución conocidos y
-`docs/evidence.generated.md`. No elimina código, fixtures, `.gitkeep` ni otros
-archivos del usuario. La confirmación es obligatoria salvo con `--yes`.
+El comando crea dos batches reales, procesa explícitamente el primero, lo
+reprocesa sin volver a llamar las APIs, ejecuta auditorías de duplicados, seis
+búsquedas en español y la salvaguarda sintética. Cualquier criterio fallido
+produce un código de salida distinto de cero.
 
-La ejecución genera los archivos ignorados por Git:
+Las salidas locales ignoradas por Git son:
 
-- `artifacts/evidence.json`, `artifacts/evidence.csv` y `artifacts/run.log`;
+- `artifacts/evidence.json`;
+- `artifacts/evidence.csv`;
+- `artifacts/run.log`;
 - `docs/evidence.generated.md`.
 
-El JSON incluye tablas Bronze, contrato, idempotencia, SQL exacto de duplicados,
-seis resultados de búsqueda y los cuatro conteos calculados de seguridad
-sintética. `evidence` sólo vuelve a renderizar CSV, log y Markdown desde ese
-JSON; no llama APIs. El script equivalente es
-`python scripts/run_demo.py --fresh --yes`.
+La CI rápida se ejecuta en pull requests y pushes a `main` sin llamadas live.
+El workflow `E2E live` sólo se ejecuta manualmente o una vez por semana; publica
+durante 14 días evidencia, manifests y checksums mediante una lista explícita.
+No publica respuestas Bronze completas.
 
-Los atajos disponibles son `make build`, `make test`, `make demo`,
-`make evidence` y `make clean-generated`. En Docker se usan:
+## Pruebas
 
 ```powershell
-docker compose run --rm pipeline demo --fresh --yes
-docker compose run --rm pipeline evidence
+python -m ruff check src tests scripts/check_repository_hygiene.py
+python -m mypy src
+python -m coverage run --source=baby_first_steps_medallion -m pytest tests/unit
+python -m coverage report --show-missing
+pytest tests/integration -m integration
+python scripts/check_repository_hygiene.py --root . --mode publishable
 ```
 
-## Datos y seguridad
+La integración offline recorre un batch vacío válido, usa directorios
+temporales y bloquea conexiones de red. Las pruebas unitarias de Gold sustituyen
+el modelo por vectores deterministas. Nunca se presentan fixtures sintéticos
+como evidencia real ni se cargan en Silver o Gold.
 
-- Bronze preserva bytes de respuesta sin transformarlos y calcula SHA-256 sobre
-  esos bytes.
-- Las transformaciones, cuarentena y deduplicación pertenecen a Silver.
-- Datos reales, DuckDB, modelos, embeddings e índices se excluyen de Git.
-- Los datos sintéticos sólo son válidos en `tests/fixtures/synthetic/` y las
-  salvaguardas rechazan `source_type='synthetic'` en contextos productivos.
-- Los resultados son recuperación documental: no son diagnóstico, tratamiento,
-  prescripción médica ni recomendación de seguridad personalizada.
+## Limitaciones y documentación
 
-Consulte [docs/PRD.md](docs/PRD.md), [docs/architecture.md](docs/architecture.md)
-y [docs/data-contract.md](docs/data-contract.md) para las decisiones completas.
+- La disponibilidad y los límites de las APIs externas pueden cambiar.
+- PubMed y Europe PMC se solapan; la procedencia se conserva y la entidad
+  canónica se deduplica por DOI/PMID, nunca por título.
+- La presencia de un resultado no demuestra eficacia clínica, pertinencia para
+  una edad concreta ni seguridad material.
+- Los abstracts pueden estar protegidos por sus autores o editoriales; por eso
+  no se versionan respuestas completas ni se publican como artifacts de CI.
+- La búsqueda multilingüe ordena similitud semántica, no validez médica.
+
+Documentación detallada:
+
+- [Guía de ejecución](docs/execution-guide.md)
+- [Trazabilidad de la rúbrica](docs/rubric-traceability.md)
+- [Limitaciones](docs/limitations.md)
+- [Seguridad y privacidad](docs/security-and-privacy.md)
+- [Fuentes y licencias](docs/source-licenses.md)
+- [Contrato de datos](docs/data-contract.md)
+- [Arquitectura](docs/architecture.md)
+
+El código del repositorio se distribuye bajo licencia [MIT](LICENSE). Los
+metadatos y resúmenes recuperados conservan los derechos y condiciones de sus
+fuentes originales.

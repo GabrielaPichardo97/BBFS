@@ -1,0 +1,97 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: Quality and unit tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+          cache-dependency-path: requirements.lock
+
+      - name: Install locked dependencies
+        run: |
+          python -m pip install --requirement requirements.lock
+          python -m pip install --no-deps --no-build-isolation --editable .
+
+      - name: Check repository hygiene
+        run: python scripts/check_repository_hygiene.py --root . --mode tracked
+
+      - name: Ruff
+        run: python -m ruff check src tests scripts/check_repository_hygiene.py
+
+      - name: Type checking
+        run: python -m mypy src
+
+      - name: Unit tests with coverage
+        run: |
+          python -m coverage run --source=baby_first_steps_medallion -m pytest tests/unit
+          python -m coverage report --show-missing
+          python -m coverage xml
+
+  docker:
+    name: Docker and offline integration
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Validate Compose configuration
+        run: docker compose config
+
+      - name: Build CPU image
+        run: docker compose build
+
+      - name: Prepare bind-mounted runtime directories
+        run: chmod a+rwx data artifacts
+
+      - name: Run doctor in the container
+        run: docker compose run --rm --no-deps pipeline doctor
+
+      - name: Run integration tests with networking disabled
+        run: |
+          docker run --rm \
+            --network none \
+            --read-only \
+            --tmpfs /tmp:rw,nosuid,nodev,size=512m \
+            --user "$(id -u):$(id -g)" \
+            --env PYTHONPATH=/workspace/src \
+            --volume "$GITHUB_WORKSPACE:/workspace:ro" \
+            --workdir /workspace \
+            --entrypoint python \
+            bbfs-pipeline:local \
+            -m pytest tests/integration -m integration -o cache_dir=/tmp/pytest-cache
+
+      - name: Scan production paths for generated or synthetic files
+        run: |
+          docker run --rm \
+            --network none \
+            --read-only \
+            --tmpfs /tmp:rw,nosuid,nodev,size=64m \
+            --user "$(id -u):$(id -g)" \
+            --volume "$GITHUB_WORKSPACE:/workspace:ro" \
+            --workdir /workspace \
+            --entrypoint python \
+            bbfs-pipeline:local \
+            scripts/check_repository_hygiene.py --root /workspace --mode filesystem

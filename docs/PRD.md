@@ -40,6 +40,8 @@ Su salida será recuperación documental. No es diagnóstico, tratamiento, presc
 - No versionar respuestas descargadas, bases DuckDB, modelos, embeddings ni FAISS.
 - Mantener payloads reales ignorados por Git y usar artifacts de CI con retención acotada cuando sea necesario.
 - Producir métricas y evidencia mediante código ejecutado, no por inspección manual.
+- Ejecutar CI determinista y sin red en pull requests; reservar las llamadas live
+  para un workflow manual/semanal con artifacts allowlisted durante 14 días.
 
 ## Integridad de datos
 
@@ -51,4 +53,4 @@ Su salida será recuperación documental. No es diagnóstico, tratamiento, presc
 ## Fuera de alcance actual
 
 No se añaden nube, API o interfaz web, servicios gestionados, PDF/texto completo,
-embeddings GPU, benchmarking de modelos, CI ni datos descargados versionados.
+embeddings GPU, benchmarking de modelos ni datos descargados versionados.

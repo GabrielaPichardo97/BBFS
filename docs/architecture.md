@@ -60,13 +60,15 @@ SciELO no está en el flujo crítico. Sólo puede añadirse como cuarto adaptado
   modelo antes de devolver rank, score, fragmento, idioma, fecha, URL y fuentes
   observadas. No aplica un umbral artificial de relevancia.
 
-## Operación posterior (fuera del paso actual)
+## Operación reproducible
 
-1. Comando de adquisición limitado y reproducible.
-2. Comando de transformación Silver que incluye la prueba de exclusión sintética.
-3. Comando de construcción Gold/FAISS que rechaza una entrada no Silver o sintética.
-4. Docker Compose sólo envolverá ese flujo local probado; no añadirá servicios externos.
-5. CI ejecutará pruebas, demostración española y evidencia agregada; los payloads reales serán artifacts efímeros, no commits.
+1. El comando de adquisición es limitado y reproducible.
+2. Silver incluye pruebas de exclusión sintética y persistencia idempotente.
+3. Gold/FAISS rechaza una entrada no Silver o sintética.
+4. Docker Compose envuelve el flujo local con un único servicio sin puertos.
+5. CI ejecuta calidad e integración sin red en pull requests.
+6. El E2E live manual/semanal genera evidencia española y publica sólo manifests,
+   checksums y evidencia durante 14 días; nunca payloads Bronze completos.
 
 ## Demostración reproducible
 
