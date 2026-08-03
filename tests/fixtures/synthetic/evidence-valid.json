@@ -1,0 +1,71 @@
+{
+  "generated_at": "2026-08-03T00:00:00+00:00",
+  "criteria": [
+    {
+      "criterion": "environment",
+      "status": "PASS"
+    }
+  ],
+  "bronze": [
+    {
+      "batch_id": "test-batch-1",
+      "source": "test-source",
+      "fetched_at": [],
+      "files": [],
+      "bytes": 0,
+      "sha256_count": 0,
+      "status": "PASS"
+    }
+  ],
+  "contract": [
+    {
+      "source": "test-source",
+      "rows_extracted": 0,
+      "rows_valid": 0,
+      "rows_invalid": 0,
+      "principales_motivos_reales": []
+    }
+  ],
+  "idempotency": [
+    {
+      "metric": "rows_inserted",
+      "run_1": 1,
+      "run_2": 0,
+      "expected": 0,
+      "status": "PASS"
+    }
+  ],
+  "duplicates": [
+    {
+      "name": "test_duplicates",
+      "sql": "SELECT 1 WHERE FALSE",
+      "returned_rows": 0,
+      "status": "PASS"
+    }
+  ],
+  "semantic_search": [
+    {
+      "query": "consulta de prueba en español",
+      "status": "PASS",
+      "results": [
+        {
+          "rank": 1,
+          "canonical_id": "test:canonical",
+          "title": "Título de prueba",
+          "language": "es",
+          "source": "test-source",
+          "score": 1.0
+        }
+      ]
+    }
+  ],
+  "synthetic_safety": {
+    "synthetic_records_in_bronze": 0,
+    "synthetic_records_in_silver": 0,
+    "synthetic_records_in_gold": 0,
+    "synthetic_records_in_evidence": 0
+  },
+  "execution_log": [
+    "test-only evidence rendering"
+  ]
+}

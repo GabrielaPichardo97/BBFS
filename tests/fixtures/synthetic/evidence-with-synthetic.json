@@ -1,0 +1,9 @@
+{
+  "source_type": "synthetic",
+  "synthetic_safety": {
+    "synthetic_records_in_bronze": 0,
+    "synthetic_records_in_silver": 0,
+    "synthetic_records_in_gold": 0,
+    "synthetic_records_in_evidence": 1
+  }
+}

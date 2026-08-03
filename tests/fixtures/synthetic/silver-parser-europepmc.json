@@ -1,0 +1,19 @@
+{
+  "resultList": {
+    "result": [
+      {
+        "source": "SYNTHETIC",
+        "id": "silver-europe-0001",
+        "doi": "10.9999/synthetic-europe-0001",
+        "title": "SYNTHETIC EUROPE PMC TITLE — NEVER INGEST",
+        "abstractText": "SYNTHETIC EUROPE PMC ABSTRACT — NEVER INGEST. This artificial fixture exists solely to test Silver parsing without contacting an API.",
+        "language": "eng",
+        "firstPublicationDate": "2020-01-02",
+        "authorList": {"author": [{"fullName": "Synthetic Author"}]},
+        "journalTitle": "Synthetic Journal",
+        "keywordList": {"keyword": ["synthetic"]},
+        "meshHeadingList": {"meshHeading": ["Test Data"]}
+      }
+    ]
+  }
+}

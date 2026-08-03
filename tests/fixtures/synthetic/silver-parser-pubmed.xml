@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<PubmedArticleSet>
+  <PubmedArticle>
+    <MedlineCitation>
+      <PMID>98765432101</PMID>
+      <Article>
+        <Journal>
+          <JournalIssue><PubDate><Year>2020</Year><Month>01</Month><Day>02</Day></PubDate></JournalIssue>
+          <Title>Synthetic Journal</Title>
+        </Journal>
+        <ArticleTitle>SYNTHETIC PUBMED TITLE — NEVER INGEST</ArticleTitle>
+        <Abstract><AbstractText>SYNTHETIC PUBMED ABSTRACT — NEVER INGEST. This deliberately artificial abstract is long enough to exercise source parsing in a unit test only.</AbstractText></Abstract>
+        <AuthorList><Author><ForeName>Test</ForeName><LastName>Author</LastName></Author></AuthorList>
+        <Language>eng</Language>
+        <ELocationID EIdType="doi">10.9999/synthetic-pubmed-0001</ELocationID>
+      </Article>
+      <KeywordList><Keyword>synthetic</Keyword></KeywordList>
+      <MeshHeadingList><MeshHeading><DescriptorName>Test Data</DescriptorName></MeshHeading></MeshHeadingList>
+    </MedlineCitation>
+    <PubmedData><ArticleIdList><ArticleId IdType="doi">10.9999/synthetic-pubmed-0001</ArticleId></ArticleIdList></PubmedData>
+  </PubmedArticle>
+</PubmedArticleSet>

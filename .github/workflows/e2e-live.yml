@@ -1,0 +1,111 @@
+name: E2E live
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "23 5 * * 1"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: e2e-live-${{ github.repository }}
+  cancel-in-progress: false
+
+jobs:
+  live-demo:
+    name: Real-source demonstration
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      HF_CACHE_DIR: ${{ github.workspace }}/.cache/huggingface
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python for evidence summary
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Restore Hugging Face model cache
+        uses: actions/cache@v4
+        with:
+          path: .cache/huggingface
+          key: hf-multilingual-e5-small-${{ runner.os }}-${{ hashFiles('requirements.lock') }}
+          restore-keys: |
+            hf-multilingual-e5-small-${{ runner.os }}-
+
+      - name: Build CPU image
+        run: docker compose build
+
+      - name: Run two-batch live demonstration
+        run: |
+          mkdir -p "$HF_CACHE_DIR" data artifacts
+          docker run --rm \
+            --user "$(id -u):$(id -g)" \
+            --env BFSM_ARTIFACTS_DIR=/app/artifacts \
+            --env BFSM_DATA_DIR=/app/data \
+            --env BFSM_LOG_LEVEL=INFO \
+            --env HF_HOME=/home/app/.cache/huggingface \
+            --volume "$GITHUB_WORKSPACE/data:/app/data" \
+            --volume "$GITHUB_WORKSPACE/artifacts:/app/artifacts" \
+            --volume "$GITHUB_WORKSPACE/docs:/app/docs" \
+            --volume "$HF_CACHE_DIR:/home/app/.cache/huggingface" \
+            bbfs-pipeline:local \
+            demo --fresh --yes
+
+      - name: Write acceptance matrix to the job summary
+        if: always()
+        env:
+          EVIDENCE_PATH: artifacts/evidence.json
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          evidence_path = Path(os.environ["EVIDENCE_PATH"])
+          if not evidence_path.is_file():
+              with Path(os.environ["GITHUB_STEP_SUMMARY"]).open("a", encoding="utf-8") as summary:
+                  summary.write(
+                      "## Matriz de aceptación BBFS\n\n"
+                      "| Criterio | Resultado |\n"
+                      "| --- | --- |\n"
+                      "| evidence_generated | FAIL |\n\n"
+                      "La demostración no produjo `artifacts/evidence.json`.\n"
+                  )
+              raise SystemExit("No se generó artifacts/evidence.json.")
+
+          evidence = json.loads(evidence_path.read_text(encoding="utf-8"))
+          criteria = evidence["criteria"]
+          lines = [
+              "## Matriz de aceptación BBFS",
+              "",
+              "| Criterio | Resultado |",
+              "| --- | --- |",
+              *[f"| {row['criterion']} | {row['status']} |" for row in criteria],
+              "",
+              f"Batch Silver seleccionado: `{evidence['selected_batch_id']}`",
+              "",
+          ]
+          with Path(os.environ["GITHUB_STEP_SUMMARY"]).open("a", encoding="utf-8") as summary:
+              summary.write("\n".join(lines))
+          if any(row["status"] != "PASS" for row in criteria):
+              raise SystemExit("La matriz de aceptación contiene criterios no PASS.")
+          PY
+
+      - name: Upload evidence allowlist
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bbfs-live-evidence-${{ github.run_id }}
+          retention-days: 14
+          if-no-files-found: error
+          path: |
+            artifacts/evidence.json
+            artifacts/evidence.csv
+            artifacts/run.log
+            docs/evidence.generated.md
+            data/bronze/*/manifest.json
+            data/bronze/*/checksums.sha256

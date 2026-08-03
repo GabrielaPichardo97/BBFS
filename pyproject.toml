@@ -1,0 +1,57 @@
+[build-system]
+requires = ["setuptools>=75.8.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "baby-first-steps-medallion"
+version = "0.1.0"
+description = "Local scaffold for a bilingual early-childhood documentary medallion pipeline."
+readme = "README.md"
+requires-python = ">=3.11,<3.12"
+license = { text = "MIT" }
+authors = [{ name = "BBFS contributors" }]
+dependencies = [
+  "duckdb==1.2.2",
+  "faiss-cpu==1.10.0",
+  "httpx==0.28.1",
+  "numpy==2.4.6",
+  "pydantic==2.10.6",
+  "pytz==2025.2",
+  "sentence-transformers==3.4.1",
+  "torch==2.6.0+cpu",
+  "typer==0.15.1",
+]
+
+[project.optional-dependencies]
+dev = [
+  "coverage==7.10.7",
+  "mypy==1.15.0",
+  "pytest==8.3.5",
+  "ruff==0.9.10",
+]
+
+[project.scripts]
+baby-first-steps = "baby_first_steps_medallion.cli:main"
+baby-first-steps-medallion = "baby_first_steps_medallion.cli:main"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+markers = [
+  "integration: deterministic multi-layer tests that must run without network access",
+]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+src = ["src"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+files = ["src"]
+mypy_path = "src"
+warn_unused_configs = true

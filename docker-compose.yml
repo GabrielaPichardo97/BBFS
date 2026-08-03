@@ -1,0 +1,18 @@
+services:
+  pipeline:
+    image: bbfs-pipeline:local
+    build:
+      context: .
+    environment:
+      BFSM_ARTIFACTS_DIR: /app/artifacts
+      BFSM_DATA_DIR: /app/data
+      BFSM_LOG_LEVEL: INFO
+      HF_HOME: /home/app/.cache/huggingface
+    volumes:
+      - ./data:/app/data
+      - ./artifacts:/app/artifacts
+      - ./docs:/app/docs
+      - hf-cache:/home/app/.cache/huggingface
+
+volumes:
+  hf-cache:
